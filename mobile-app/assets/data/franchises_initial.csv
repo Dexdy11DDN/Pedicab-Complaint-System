@@ -1,0 +1,101 @@
+franchiseNumber,ownerName,contactNumber,address,vehicleCount,licenseNumber,status
+1001,Juan Dela Cruz,09171234567,123 Rizal Ave Manila,5,LIC-2024-001,active
+1002,Maria Santos,09181234568,456 Quezon Blvd Quezon City,3,LIC-2024-002,active
+1003,Pedro Garcia,09191234569,789 EDSA Makati,7,LIC-2024-003,active
+1004,Ana Reyes,09201234570,321 Taft Ave Manila,4,LIC-2024-004,active
+1005,Jose Mendoza,09211234571,654 España Manila,6,LIC-2024-005,suspended
+1006,Carmen Lopez,09221234572,987 Roxas Blvd Pasay,8,LIC-2024-006,active
+1007,Roberto Aquino,09231234573,147 Makati Ave Makati,2,LIC-2024-007,active
+1008,Elena Torres,09241234574,258 Ortigas Pasig,5,LIC-2024-008,active
+1009,Miguel Ramos,09251234575,369 Shaw Blvd Mandaluyong,3,LIC-2024-009,active
+1010,Sofia Fernandez,09261234576,741 UN Ave Manila,4,LIC-2024-010,active
+1011,Carlos Villanueva,09271234577,852 Buendia Makati,6,LIC-2024-011,active
+1012,Linda Santiago,09281234578,963 Gil Puyat Makati,7,LIC-2024-012,revoked
+1013,Antonio Morales,09291234579,159 Ayala Ave Makati,5,LIC-2024-013,active
+1014,Rosa Gutierrez,09301234580,357 Sen Gil Puyat Pasay,3,LIC-2024-014,active
+1015,Francisco Diaz,09311234581,468 Aurora Blvd QC,8,LIC-2024-015,active
+1016,Luz Ramirez,09321234582,579 Commonwealth QC,4,LIC-2024-016,active
+1017,Manuel Castro,09331234583,681 Katipunan QC,2,LIC-2024-017,active
+1018,Teresa Navarro,09341234584,792 Magsaysay Manila,6,LIC-2024-018,active
+1019,Ricardo Bautista,09351234585,814 Legarda Manila,5,LIC-2024-019,suspended
+1020,Patricia Cruz,09361234586,925 Recto Ave Manila,3,LIC-2024-020,active
+1021,Eduardo Santos,09371234587,136 C.M. Recto Manila,7,LIC-2024-021,active
+1022,Angelica Domingo,09381234588,247 Alabang Muntinlupa,4,LIC-2024-022,active
+1023,Ramon Pascual,09391234589,358 Sucat Paranaque,6,LIC-2024-023,active
+1024,Gloria Mercado,09401234590,469 Bicutan Taguig,5,LIC-2024-024,active
+1025,Ernesto Rivera,09411234591,571 BGC Taguig,8,LIC-2024-025,active
+1026,Cristina Gomez,09421234592,682 Bonifacio Taguig,3,LIC-2024-026,active
+1027,Alfredo Tan,09431234593,793 McKinley Taguig,2,LIC-2024-027,active
+1028,Margarita Lim,09441234594,815 Market Market Taguig,4,LIC-2024-028,active
+1029,Salvador Ong,09451234595,926 Venice Taguig,6,LIC-2024-029,active
+1030,Rosario Chua,09461234596,137 Pinagsama Taguig,5,LIC-2024-030,active
+1031,Rodrigo Yap,09471234597,248 Upper Bicutan,7,LIC-2024-031,active
+1032,Beatriz Lee,09481234598,359 Lower Bicutan,3,LIC-2024-032,suspended
+1033,Armando Sy,09491234599,461 Western Bicutan,4,LIC-2024-033,active
+1034,Victoria Tan,09501234600,572 Fort Bonifacio,6,LIC-2024-034,active
+1035,Gregorio Wong,09511234601,683 The Fort Taguig,8,LIC-2024-035,active
+1036,Concepcion Yu,09521234602,794 Serendra Taguig,5,LIC-2024-036,active
+1037,Domingo Lao,09531234603,816 One Serendra,2,LIC-2024-037,active
+1038,Esperanza Chan,09541234604,927 Forbestown,3,LIC-2024-038,active
+1039,Fernando Go,09551234605,138 Forbes Park,7,LIC-2024-039,active
+1040,Rosalinda Uy,09561234606,249 Dasmarinas Makati,4,LIC-2024-040,active
+1041,Arturo Tiu,09571234607,351 Urdaneta Makati,6,LIC-2024-041,active
+1042,Amparo Kho,09581234608,462 San Lorenzo Makati,5,LIC-2024-042,active
+1043,Leandro Ang,09591234609,573 Bel-Air Makati,8,LIC-2024-043,revoked
+1044,Milagros Dy,09601234610,684 Salcedo Makati,3,LIC-2024-044,active
+1045,Benito Lim,09611234611,795 Legaspi Makati,2,LIC-2024-045,active
+1046,Estrella Tan,09621234612,817 Greenbelt Makati,4,LIC-2024-046,active
+1047,Florencio Chua,09631234613,928 Glorietta Makati,6,LIC-2024-047,active
+1048,Remedios Ong,09641234614,139 Landmark Makati,7,LIC-2024-048,active
+1049,Guillermo Yap,09651234615,241 Century City,5,LIC-2024-049,active
+1050,Natividad Lee,09661234616,352 Rockwell Makati,3,LIC-2024-050,active
+1051,Teofilo Sy,09671234617,463 Power Plant,8,LIC-2024-051,active
+1052,Purificacion Wong,09681234618,574 Poblacion Makati,4,LIC-2024-052,suspended
+1053,Dionisio Yu,09691234619,685 Jupiter Makati,6,LIC-2024-053,active
+1054,Felicidad Lao,09701234620,796 Polaris Makati,5,LIC-2024-054,active
+1055,Hilario Chan,09711234621,818 Amorsolo Makati,2,LIC-2024-055,active
+1056,Josefa Go,09721234622,929 Paseo Makati,7,LIC-2024-056,active
+1057,Laureano Uy,09731234623,131 Dela Rosa Makati,3,LIC-2024-057,active
+1058,Maxima Tiu,09741234624,242 Tordesillas,4,LIC-2024-058,active
+1059,Nicanor Kho,09751234625,353 Rada Makati,6,LIC-2024-059,active
+1060,Olimpia Ang,09761234626,464 Valero Makati,5,LIC-2024-060,active
+1061,Placido Dy,09771234627,575 Evangelista,8,LIC-2024-061,active
+1062,Rosendo Lim,09781234628,686 Arnaiz Makati,3,LIC-2024-062,active
+1063,Segundino Tan,09791234629,797 Chino Roces,2,LIC-2024-063,revoked
+1064,Trinidad Chua,09801234630,819 Pasong Tamo,4,LIC-2024-064,active
+1065,Urbano Ong,09811234631,921 Don Bosco,6,LIC-2024-065,active
+1066,Venancio Yap,09821234632,132 Kalayaan Makati,7,LIC-2024-066,active
+1067,Yolanda Lee,09831234633,243 Yakal Makati,5,LIC-2024-067,active
+1068,Abundio Sy,09841234634,354 Malugay Makati,3,LIC-2024-068,active
+1069,Brigida Wong,09851234635,465 Magallanes,8,LIC-2024-069,active
+1070,Casimiro Yu,09861234636,576 EDSA Magallanes,4,LIC-2024-070,active
+1071,Delfin Lao,09871234637,687 Vito Cruz,6,LIC-2024-071,suspended
+1072,Esmeralda Chan,09881234638,798 Quirino Ave,5,LIC-2024-072,active
+1073,Fausto Go,09891234639,811 Tramo Pasay,2,LIC-2024-073,active
+1074,Genoveva Uy,09901234640,922 Gil Puyat Pasay,7,LIC-2024-074,active
+1075,Herminio Tiu,09911234641,133 Libertad Pasay,3,LIC-2024-075,active
+1076,Imelda Kho,09921234642,244 Harrison Pasay,4,LIC-2024-076,active
+1077,Jovito Ang,09931234643,355 Taft Pasay,6,LIC-2024-077,active
+1078,Lourdes Dy,09941234644,466 Pablo Ocampo,5,LIC-2024-078,active
+1079,Melquiades Lim,09951234645,577 Sen Gil Puyat,8,LIC-2024-079,active
+1080,Narcisa Tan,09961234646,688 Buendia Pasay,3,LIC-2024-080,active
+1081,Octavio Chua,09971234647,799 EDSA Pasay,2,LIC-2024-081,active
+1082,Primitiva Ong,09981234648,812 Macapagal Pasay,4,LIC-2024-082,revoked
+1083,Quirino Yap,09991234649,923 MOA Complex,6,LIC-2024-083,active
+1084,Rufina Lee,09101234650,134 Seaside Pasay,7,LIC-2024-084,active
+1085,Saturnino Sy,09111234651,245 Airport Road,5,LIC-2024-085,active
+1086,Teodora Wong,09121234652,356 Domestic Road,3,LIC-2024-086,active
+1087,Ulpiano Yu,09131234653,467 Newport Pasay,8,LIC-2024-087,active
+1088,Visitacion Lao,09141234654,578 Resorts World,4,LIC-2024-088,active
+1089,Zoilo Chan,09151234655,689 NAIA Complex,6,LIC-2024-089,suspended
+1090,Adelaida Go,09161234656,791 Andrews Ave,5,LIC-2024-090,active
+1091,Bonifacio Uy,09171234657,813 Ninoy Aquino,2,LIC-2024-091,active
+1092,Cirilo Tiu,09181234658,924 Terminal 3,7,LIC-2024-092,active
+1093,Dolores Kho,09191234659,135 Paranaque,3,LIC-2024-093,active
+1094,Emilio Ang,09201234660,246 Sucat Road,4,LIC-2024-094,active
+1095,Faustino Dy,09211234661,357 Dr Santos,6,LIC-2024-095,active
+1096,Gerardo Lim,09221234662,468 Better Living,5,LIC-2024-096,active
+1097,Hilaria Tan,09231234663,579 BF Homes,8,LIC-2024-097,active
+1098,Isidro Chua,09241234664,681 Don Galo,3,LIC-2024-098,active
+1099,Juanita Ong,09251234665,792 Moonwalk,2,LIC-2024-099,revoked
+1100,Lorenzo Yap,09261234666,814 Tambo Paranaque,4,LIC-2024-100,active

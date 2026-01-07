@@ -1,0 +1,14 @@
+node_modules/
+.env
+uploads/
+*.log
+.DS_Store
+dist/
+build/
+
+# Mobile
+*.apk
+*.aab
+*.ipa
+android/.gradle
+ios/Pods/
