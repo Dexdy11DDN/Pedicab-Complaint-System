@@ -4,11 +4,14 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { complaintsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import Sidebar from '../components/Sidebar';
 
 const ClientHomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const [activeSection, setActiveSection] = useState('myComplaints');
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [complaints, setComplaints] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  // showForm state removed in favor of activeSection
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState('synced');
@@ -74,7 +77,7 @@ const ClientHomeScreen = ({ navigation }) => {
     try {
       await complaintsAPI.create(formData);
       setMessage('Complaint submitted successfully!');
-      setShowForm(false);
+      setActiveSection('myComplaints');
       setFormData({
         franchiseNumber: '',
         description: '',
@@ -101,30 +104,37 @@ const ClientHomeScreen = ({ navigation }) => {
     return colors[status] || '#999';
   };
 
-  const truncateText = (text, maxLength = 50) => {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-  };
+
 
   const formatCategory = (category) => {
-    return category.replace('_', ' ').split(' ').map(word => 
+    return category.replace('_', ' ').split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
   const formatStatus = (status) => {
-    return status.replace('_', ' ').split(' ').map(word => 
+    return status.replace('_', ' ').split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
   return (
     <View style={styles.container}>
+      <Sidebar
+        visible={isSidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+        onNavigate={setActiveSection}
+        activeItem={activeSection}
+        userRole="client"
+        userName={user?.firstName}
+      />
+
       {/* Streamlined Header */}
       <View style={[styles.header, isLandscape && styles.headerLandscape]}>
         <View style={[styles.headerLeft, isLandscape && styles.headerLeftLandscape]}>
-          <Text style={styles.iconEmoji}>🚲</Text>
+          <TouchableOpacity onPress={() => setSidebarVisible(true)}>
+            <Text style={styles.hamburgerIcon}>☰</Text>
+          </TouchableOpacity>
           <View style={styles.titleSection}>
             <Text style={styles.headerTitle}>Pedicab Complaint System</Text>
             <Text style={styles.welcomeText}>Welcome, {user?.firstName}</Text>
@@ -138,13 +148,12 @@ const ClientHomeScreen = ({ navigation }) => {
             </View>
             <Text style={styles.syncStatus}>{syncStatus}</Text>
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
       {/* Action Section */}
+      {/* Action Section - Removed as it's now in sidebar */}
+      {/* 
       <View style={styles.actionSection}>
         <TouchableOpacity 
           style={styles.newComplaintButton}
@@ -154,6 +163,7 @@ const ClientHomeScreen = ({ navigation }) => {
           <Text style={styles.newComplaintText}>{showForm ? '✕ Cancel' : '+ New Complaint'}</Text>
         </TouchableOpacity>
       </View>
+      */}
 
       {message ? (
         <View style={styles.messageAlert}>
@@ -161,14 +171,15 @@ const ClientHomeScreen = ({ navigation }) => {
         </View>
       ) : null}
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff8c42']} />
         }
       >
-        {/* Complaint Form */}
-        {showForm && (
+
+        {/* New Complaint Form */}
+        {activeSection === 'newComplaint' && (
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Submit New Complaint</Text>
 
@@ -180,7 +191,7 @@ const ClientHomeScreen = ({ navigation }) => {
                   placeholder="e.g., 1234"
                   placeholderTextColor="#999"
                   value={formData.franchiseNumber}
-                  onChangeText={(text) => setFormData({...formData, franchiseNumber: text})}
+                  onChangeText={(text) => setFormData({ ...formData, franchiseNumber: text })}
                   keyboardType="numeric"
                   maxLength={4}
                 />
@@ -191,7 +202,7 @@ const ClientHomeScreen = ({ navigation }) => {
                 <View style={styles.pickerWrapper}>
                   <Picker
                     selectedValue={formData.category}
-                    onValueChange={(value) => setFormData({...formData, category: value})}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
                     style={styles.picker}
                   >
                     <Picker.Item label="Overcharging" value="overcharging" />
@@ -213,7 +224,7 @@ const ClientHomeScreen = ({ navigation }) => {
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#999"
                   value={formData.incidentDate}
-                  onChangeText={(text) => setFormData({...formData, incidentDate: text})}
+                  onChangeText={(text) => setFormData({ ...formData, incidentDate: text })}
                 />
               </View>
 
@@ -224,7 +235,7 @@ const ClientHomeScreen = ({ navigation }) => {
                   placeholder="Where did it occur?"
                   placeholderTextColor="#999"
                   value={formData.location}
-                  onChangeText={(text) => setFormData({...formData, location: text})}
+                  onChangeText={(text) => setFormData({ ...formData, location: text })}
                 />
               </View>
             </View>
@@ -236,7 +247,7 @@ const ClientHomeScreen = ({ navigation }) => {
                 placeholder="Describe the incident in detail..."
                 placeholderTextColor="#999"
                 value={formData.description}
-                onChangeText={(text) => setFormData({...formData, description: text})}
+                onChangeText={(text) => setFormData({ ...formData, description: text })}
                 multiline
                 numberOfLines={4}
               />
@@ -248,52 +259,83 @@ const ClientHomeScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Complaint History Section */}
-        <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>Complaint History</Text>
-          
-          {complaints.length === 0 ? (
-            <View style={styles.noComplaints}>
-              <Text style={styles.noComplaintsText}>No complaints submitted yet.</Text>
-            </View>
-          ) : (
-            <View>
-              {/* Table Header */}
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Franchise</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Type</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Status</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Submitted</Text>
-              </View>
 
-              {/* Table Rows */}
-              {complaints.map((complaint) => (
-                <TouchableOpacity
-                  key={complaint._id}
-                  style={styles.tableRow}
-                  onPress={() => setSelectedComplaint(complaint)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.tableCell, { flex: 0.8 }]}>{complaint.franchiseNumber}</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]} numberOfLines={1}>
-                    {formatCategory(complaint.category)}
-                  </Text>
-                  <View style={{ flex: 1 }}>
-                    <View style={[styles.compactStatusBadge, { backgroundColor: getStatusColor(complaint.status) }]}>
-                      <Text style={styles.compactStatusText} numberOfLines={1}>
-                        {formatStatus(complaint.status)}
-                      </Text>
+
+        {/* My Complaints History Section */}
+        {activeSection === 'myComplaints' && (
+          <View style={styles.historySection}>
+            <Text style={styles.sectionTitle}>Complaint History</Text>
+
+            {complaints.length === 0 ? (
+              <View style={styles.noComplaints}>
+                <Text style={styles.noComplaintsText}>No complaints submitted yet.</Text>
+              </View>
+            ) : (
+              <View>
+                {/* Table Header */}
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Franchise</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>Type</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>Status</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Submitted</Text>
+                </View>
+
+                {/* Table Rows */}
+                {complaints.map((complaint) => (
+                  <TouchableOpacity
+                    key={complaint._id}
+                    style={styles.tableRow}
+                    onPress={() => setSelectedComplaint(complaint)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.tableCell, { flex: 0.8 }]}>{complaint.franchiseNumber}</Text>
+                    <Text style={[styles.tableCell, { flex: 1 }]} numberOfLines={1}>
+                      {formatCategory(complaint.category)}
+                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <View style={[styles.compactStatusBadge, { backgroundColor: getStatusColor(complaint.status) }]}>
+                        <Text style={styles.compactStatusText} numberOfLines={1}>
+                          {formatStatus(complaint.status)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={[styles.tableCell, { flex: 1.2, fontSize: 11 }]}>
-                    {new Date(complaint.createdAt).toLocaleDateString()}{'\n'}
-                    {new Date(complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text style={[styles.tableCell, { flex: 1.2, fontSize: 11 }]}>
+                      {new Date(complaint.createdAt).toLocaleDateString()}{'\n'}
+                      {new Date(complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Profile Section */}
+        {activeSection === 'profile' && (
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>My Profile</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Name:</Text>
+              <Text style={styles.detailValue}>{user.firstName} {user.lastName}</Text>
             </View>
-          )}
-        </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Email:</Text>
+              <Text style={styles.detailValue}>{user.email}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Role:</Text>
+              <Text style={styles.detailValue}>{user.role}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Total Complaints:</Text>
+              <Text style={styles.detailValue}>{complaints.length}</Text>
+            </View>
+
+            <TouchableOpacity onPress={logout} style={[styles.submitButton, { backgroundColor: '#d32f2f', marginTop: 30 }]}>
+              <Text style={styles.submitButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* Complaint Detail Modal */}
@@ -370,7 +412,7 @@ const ClientHomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  
+
   // Header Styles
   header: {
     backgroundColor: '#ff8c42',
@@ -386,6 +428,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   headerLeftLandscape: { flex: 2 },
+  hamburgerIcon: { fontSize: 30, marginRight: 15, color: 'white', fontWeight: 'bold' },
   iconEmoji: { fontSize: 45, marginRight: 12 },
   titleSection: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
@@ -560,7 +603,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   modalClose: { fontSize: 28, color: '#999', fontWeight: 'bold' },
-  modalBody: { 
+  modalBody: {
     paddingHorizontal: 20,
     paddingVertical: 15,
   },

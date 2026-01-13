@@ -61,7 +61,11 @@ export const franchisesAPI = {
   getByNumber: (number) => api.get(`/franchises/${number}`),
   create: (data) => api.post('/franchises', data),
   update: (number, data) => api.put(`/franchises/${number}`, data),
-  updateStatus: (number, status) => api.patch(`/franchises/${number}/status`, { status })
+  updateStatus: (number, status) => api.patch(`/franchises/${number}/status`, { status }),
+  // Offense management
+  getOffenses: (number) => api.get(`/franchises/${number}/offenses`),
+  resetOffenses: (number) => api.delete(`/franchises/${number}/offenses`),
+  removeOffense: (number, offenseId) => api.delete(`/franchises/${number}/offenses/${offenseId}`)
 };
 
 // Investigations API (NEW WORKFLOW)

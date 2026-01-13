@@ -10,7 +10,7 @@ const { emitToAll, emitToRoles, emitToUser } = require('../utils/socketEmitter')
 router.get('/', authMiddleware, async (req, res) => {
   try {
     let tickets;
-    
+
     if (req.user.role === 'admin') {
       // Admin can see all tickets
       tickets = await Ticket.find()
@@ -30,7 +30,7 @@ router.get('/', authMiddleware, async (req, res) => {
     } else {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     res.json({ tickets });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -47,7 +47,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       .populate('complaint')
       .populate('enforcer', 'firstName lastName email')
       .populate('forwardedBy', 'firstName lastName');
-    
+
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
@@ -78,7 +78,7 @@ router.post('/', authMiddleware, roleMiddleware('enforcer'), async (req, res) =>
     // Verify investigation exists and is accepted by this enforcer
     const Investigation = require('../models/Investigation');
     const investigation = await Investigation.findById(investigationId);
-    
+
     if (!investigation) {
       return res.status(404).json({ message: 'Investigation not found' });
     }
@@ -131,14 +131,14 @@ router.post('/', authMiddleware, roleMiddleware('enforcer'), async (req, res) =>
 });
 
 // @route   PATCH /api/tickets/:id/forward
-// @desc    Forward ticket to higher ups
+// @desc    Forward ticket to higher ups (confirms offense and records on franchise)
 // @access  Admin
 router.patch('/:id/forward', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const { notes } = req.body;
 
     const ticket = await Ticket.findById(req.params.id);
-    
+
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
@@ -149,6 +149,29 @@ router.patch('/:id/forward', authMiddleware, roleMiddleware('admin'), async (req
     if (notes) ticket.notes = notes;
 
     await ticket.save();
+
+    // Record offense on the franchise (confirmed violation)
+    const Franchise = require('../models/Franchise');
+    const franchise = await Franchise.findOne({ franchiseNumber: ticket.franchiseNumber });
+
+    if (franchise) {
+      // Add offense record
+      const violationTypes = ticket.violations.map(v => v.type);
+      franchise.offenses.push({
+        ticketId: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        violations: violationTypes,
+        confirmedAt: Date.now(),
+        confirmedBy: req.user.userId
+      });
+
+      // Update offense count and 3-strike flag
+      franchise.offenseCount = franchise.offenses.length;
+      franchise.hasThreeStrikes = franchise.offenseCount >= 3;
+
+      await franchise.save();
+      console.log(`Recorded offense for franchise ${ticket.franchiseNumber}. Total offenses: ${franchise.offenseCount}`);
+    }
 
     const updatedTicket = await Ticket.findById(ticket._id)
       .populate('investigation')
@@ -170,7 +193,7 @@ router.patch('/:id/status', authMiddleware, roleMiddleware('admin'), async (req,
     const { status, notes } = req.body;
 
     const ticket = await Ticket.findById(req.params.id);
-    
+
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }

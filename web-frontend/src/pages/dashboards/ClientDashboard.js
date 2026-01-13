@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { complaintsAPI } from '../../services/api';
 import { FaWifi } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
+import Sidebar from '../../components/Sidebar';
+import { useToast, handleApiError } from '../../components/ErrorToast';
 import './Dashboard.css';
 
 const ClientDashboard = () => {
   const { user, logout } = useAuth();
+  const { showSuccess, showError } = useToast();
+  const [activeSection, setActiveSection] = useState('myComplaints');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [complaints, setComplaints] = useState([]);
-  const [showForm, setShowForm] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState('synced');
@@ -20,7 +24,6 @@ const ClientDashboard = () => {
     location: '',
     incidentDate: ''
   });
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const handleOnline = () => {
@@ -41,35 +44,35 @@ const ClientDashboard = () => {
     };
   }, []);
 
-  useEffect(() => {
-    loadComplaints();
-  }, []);
-
-  const loadComplaints = async () => {
+  const loadComplaints = useCallback(async () => {
     try {
       const response = await complaintsAPI.getMyComplaints();
-      setComplaints(response.data);
+      const sortedComplaints = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setComplaints(sortedComplaints);
       setSyncStatus('synced');
     } catch (error) {
       console.error('Error loading complaints:', error);
       setSyncStatus('unable to sync');
+      showError(handleApiError(error));
     }
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    loadComplaints();
+  }, [loadComplaints]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate 4-digit franchise number
     if (!/^\d{4}$/.test(formData.franchiseNumber)) {
-      setMessage('Franchise number must be exactly 4 digits');
-      setTimeout(() => setMessage(''), 3000);
+      showError('Franchise number must be exactly 4 digits');
       return;
     }
 
     try {
       await complaintsAPI.create(formData);
-      setMessage('Complaint submitted successfully!');
-      setShowForm(false);
+      showSuccess('Complaint submitted successfully!');
       setFormData({
         franchiseNumber: '',
         description: '',
@@ -77,11 +80,10 @@ const ClientDashboard = () => {
         location: '',
         incidentDate: ''
       });
+      setActiveSection('myComplaints');
       loadComplaints();
-      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      setMessage('Error submitting complaint');
-      setTimeout(() => setMessage(''), 3000);
+      showError(handleApiError(error));
     }
   };
 
@@ -107,6 +109,15 @@ const ClientDashboard = () => {
 
   return (
     <div className="dashboard">
+      {/* Sidebar Navigation */}
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        userRole="client"
+        isCollapsed={sidebarCollapsed}
+        toggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+
       {/* Header */}
       <div className="streamlined-header">
         <div className="header-left">
@@ -134,18 +145,10 @@ const ClientDashboard = () => {
         </div>
       </div>
 
-      <div className="dashboard-content">
-        {/* New Complaint Button */}
-        <div className="action-section">
-          <button onClick={() => setShowForm(!showForm)} className="btn-new-complaint">
-            {showForm ? '✕ Cancel' : '+ New Complaint'}
-          </button>
-        </div>
+      <div className={`dashboard-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
 
-        {message && <div className="message-alert">{message}</div>}
-
-        {/* Complaint Form */}
-        {showForm && (
+        {/* New Complaint Section */}
+        {activeSection === 'newComplaint' && (
           <div className="complaint-form-card">
             <h3>Submit New Complaint</h3>
             <form onSubmit={handleSubmit}>
@@ -216,47 +219,81 @@ const ClientDashboard = () => {
           </div>
         )}
 
-        {/* Compact Complaint History */}
-        <div className="complaint-history-section">
-          <h2>Complaint History</h2>
-          {complaints.length === 0 ? (
-            <div className="no-complaints">
-              <p>No complaints submitted yet.</p>
-            </div>
-          ) : (
-            <div className="complaint-table">
-              <div className="table-header">
-                <div className="col-franchise">Franchise</div>
-                <div className="col-type">Type</div>
-                <div className="col-status">Status</div>
-                <div className="col-time">Submitted</div>
-                <div className="col-comment">Comment</div>
-              </div>
-              {complaints.map(complaint => (
-                <div 
-                  key={complaint._id} 
-                  className="table-row"
-                  onClick={() => setSelectedComplaint(complaint)}
+        {/* My Complaints Section */}
+        {activeSection === 'myComplaints' && (
+          <div className="complaint-history-section">
+            <h2>My Complaints</h2>
+            {complaints.length === 0 ? (
+              <div className="no-complaints">
+                <p>No complaints submitted yet.</p>
+                <button
+                  onClick={() => setActiveSection('newComplaint')}
+                  className="btn-primary"
+                  style={{ marginTop: '1rem' }}
                 >
-                  <div className="col-franchise">{complaint.franchiseNumber}</div>
-                  <div className="col-type">{complaint.category.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</div>
-                  <div className="col-status">
-                    <span 
-                      className="compact-status-badge" 
-                      style={{ backgroundColor: getStatusColor(complaint.status) }}
-                    >
-                      {complaint.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                    </span>
-                  </div>
-                  <div className="col-time">
-                    {new Date(complaint.createdAt).toLocaleDateString()} {new Date(complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div className="col-comment">{truncateText(complaint.description)}</div>
+                  + Submit Your First Complaint
+                </button>
+              </div>
+            ) : (
+              <div className="complaint-table">
+                <div className="table-header">
+                  <div className="col-franchise">Franchise</div>
+                  <div className="col-type">Type</div>
+                  <div className="col-status">Status</div>
+                  <div className="col-time">Submitted</div>
+                  <div className="col-comment">Comment</div>
                 </div>
-              ))}
+                {complaints.map(complaint => (
+                  <div
+                    key={complaint._id}
+                    className="table-row"
+                    onClick={() => setSelectedComplaint(complaint)}
+                  >
+                    <div className="col-franchise">{complaint.franchiseNumber}</div>
+                    <div className="col-type">{complaint.category.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</div>
+                    <div className="col-status">
+                      <span
+                        className="compact-status-badge"
+                        style={{ backgroundColor: getStatusColor(complaint.status) }}
+                      >
+                        {complaint.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      </span>
+                    </div>
+                    <div className="col-time">
+                      {new Date(complaint.createdAt).toLocaleDateString()} {new Date(complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="col-comment">{truncateText(complaint.description)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Profile Section */}
+        {activeSection === 'profile' && (
+          <div className="complaint-form-card">
+            <h3>My Profile</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="detail-row">
+                <strong>Name:</strong>
+                <span>{user.firstName} {user.lastName}</span>
+              </div>
+              <div className="detail-row">
+                <strong>Email:</strong>
+                <span>{user.email}</span>
+              </div>
+              <div className="detail-row">
+                <strong>Role:</strong>
+                <span style={{ textTransform: 'capitalize' }}>{user.role}</span>
+              </div>
+              <div className="detail-row">
+                <strong>Total Complaints:</strong>
+                <span>{complaints.length}</span>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Complaint Detail Modal */}
         {selectedComplaint && (
@@ -281,8 +318,8 @@ const ClientDashboard = () => {
                 </div>
                 <div className="detail-row">
                   <strong>Status:</strong>
-                  <span 
-                    className="compact-status-badge" 
+                  <span
+                    className="compact-status-badge"
                     style={{ backgroundColor: getStatusColor(selectedComplaint.status) }}
                   >
                     {selectedComplaint.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -302,8 +339,8 @@ const ClientDashboard = () => {
                 </div>
                 <div className="detail-full">
                   <strong>Description:</strong>
-                  <p style={{ 
-                    whiteSpace: 'pre-wrap', 
+                  <p style={{
+                    whiteSpace: 'pre-wrap',
                     lineHeight: '1.6',
                     padding: '0.75rem',
                     backgroundColor: '#f9f9f9',
@@ -323,3 +360,4 @@ const ClientDashboard = () => {
 };
 
 export default ClientDashboard;
+

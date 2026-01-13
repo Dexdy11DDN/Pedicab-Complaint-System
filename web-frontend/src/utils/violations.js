@@ -56,12 +56,12 @@ export const getAllViolationTypes = () => {
 // Get the category for a specific violation type
 export const getViolationCategory = (violationType) => {
   const normalizedType = violationType.toLowerCase().replace(/_/g, ' ');
-  
+
   for (const [category, violations] of Object.entries(VIOLATION_CATEGORIES)) {
-    const found = violations.find(v => 
+    const found = violations.find(v =>
       v.toLowerCase() === normalizedType ||
-      v.toLowerCase().replace(/['\s\/]/g, '_') === violationType.toLowerCase() ||
-      v.toLowerCase().replace(/['\s\/]/g, '') === violationType.toLowerCase().replace(/_/g, '')
+      v.toLowerCase().replace(/['\s/]/g, '_') === violationType.toLowerCase() ||
+      v.toLowerCase().replace(/['\s/]/g, '') === violationType.toLowerCase().replace(/_/g, '')
     );
     if (found) return category;
   }
@@ -85,7 +85,7 @@ export const groupViolationsByCategory = (violations) => {
     'Vehicle Violations': [],
     'Other': []
   };
-  
+
   violations.forEach(violation => {
     const category = getViolationCategory(violation.type);
     if (!grouped[category]) {
@@ -93,7 +93,7 @@ export const groupViolationsByCategory = (violations) => {
     }
     grouped[category].push(violation);
   });
-  
+
   // Remove empty categories
   return Object.fromEntries(
     Object.entries(grouped).filter(([_, violations]) => violations.length > 0)

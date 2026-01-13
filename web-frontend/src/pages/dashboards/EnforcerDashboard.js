@@ -4,6 +4,8 @@ import { franchisesAPI, investigationsAPI, ticketsAPI } from '../../services/api
 import { FaWifi } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
+import Sidebar from '../../components/Sidebar';
+import { useToast } from '../../components/ErrorToast';
 import { initDatabase } from '../../database/init';
 import { searchFranchises as searchLocalFranchises, getFranchiseCount } from '../../database/franchises';
 import { syncWithAPI, startAutoSync, stopAutoSync, exportToCSV, loadInitialData } from '../../database/sync';
@@ -11,13 +13,14 @@ import './Dashboard.css';
 
 const EnforcerDashboard = () => {
   const { user, logout } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState('available');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [availableInvestigations, setAvailableInvestigations] = useState([]);
   const [myInvestigations, setMyInvestigations] = useState([]);
   const [myTickets, setMyTickets] = useState([]);
   const [franchises, setFranchises] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [message, setMessage] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [dbInitialized, setDbInitialized] = useState(false);
   const [franchiseCount, setFranchiseCount] = useState(0);
@@ -26,7 +29,8 @@ const EnforcerDashboard = () => {
   const [selectedInvestigation, setSelectedInvestigation] = useState(null);
   const [expandedInvestigation, setExpandedInvestigation] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  
+
+
   // Violation categories - separated by Driver and Vehicle
   const violationCategories = {
     'Driver Violations': [
@@ -74,14 +78,14 @@ const EnforcerDashboard = () => {
       'other_violation'
     ]
   };
-  
+
   // Flatten and create initial state
   const allViolationTypes = Object.values(violationCategories).flat();
   const initialViolations = {};
   allViolationTypes.forEach(type => {
     initialViolations[type] = { checked: false, notes: '', photos: [] };
   });
-  
+
   const [ticketForm, setTicketForm] = useState({
     violations: initialViolations,
     additionalNotes: ''
@@ -93,15 +97,15 @@ const EnforcerDashboard = () => {
         await initDatabase();
         setDbInitialized(true);
         console.log('SQLite database initialized');
-        
+
         // Check if database is empty (first run)
         const currentCount = getFranchiseCount();
-        
+
         // Start auto-sync every 5 minutes
         const token = localStorage.getItem('token');
         if (token) {
           startAutoSync(token);
-          
+
           // If database is empty, try to sync from API first, then load sample data as fallback
           if (currentCount === 0) {
             console.log('Empty database detected - attempting to sync from API...');
@@ -131,11 +135,11 @@ const EnforcerDashboard = () => {
             setFranchiseCount(loadResult.count);
           }
         }
-        
+
         // Update franchise count
         const count = getFranchiseCount();
         setFranchiseCount(count);
-        
+
         // Pre-load franchises for instant display when tab is clicked
         if (count > 0) {
           const results = searchLocalFranchises('');
@@ -146,9 +150,9 @@ const EnforcerDashboard = () => {
         console.error('Database setup failed:', error);
       }
     };
-    
+
     setupDatabase();
-    
+
     // Cleanup on unmount
     return () => {
       stopAutoSync();
@@ -183,27 +187,37 @@ const EnforcerDashboard = () => {
     try {
       setSyncStatus('syncing...');
       if (activeTab === 'available') {
-        // Request only open investigations from backend
         const response = await investigationsAPI.getAll({ status: 'open' });
-        // Double-filter on client side as safeguard
-        const openOnly = (response.data.investigations || []).filter(inv => inv.status === 'open');
+        const openOnly = (response.data.investigations || [])
+          .filter(inv => inv.status === 'open')
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAvailableInvestigations(openOnly);
-      } else if (activeTab === 'myInvestigations') {
-        // Request only investigations accepted by this enforcer
+      } else if (activeTab === 'myInvestigations' || activeTab === 'completedInvestigations') {
         const response = await investigationsAPI.getAll({ acceptedByMe: true });
-        setMyInvestigations(response.data.investigations || []);
+        const allMyInvestigations = response.data.investigations || [];
+
+        // Split into active and completed
+        const active = allMyInvestigations
+          .filter(inv => !['resolved', 'closed', 'cancelled', 'submitted', 'pending_approval', 'under_review', 'rejected', 'approved', 'completed'].includes(inv.status))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const completed = allMyInvestigations
+          .filter(inv => ['resolved', 'closed', 'cancelled', 'submitted', 'pending_approval', 'under_review', 'rejected', 'approved', 'completed'].includes(inv.status))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        setMyInvestigations(activeTab === 'myInvestigations' ? active : completed);
       } else if (activeTab === 'myTickets') {
         const response = await ticketsAPI.getAll();
-        setMyTickets(response.data.tickets || response.data);
+        const tickets = (response.data.tickets || response.data)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setMyTickets(tickets);
       } else if (activeTab === 'franchises') {
-        // Use local SQLite database for franchises
         if (dbInitialized) {
           const results = searchLocalFranchises(searchTerm);
           setFranchises(results);
           const count = getFranchiseCount();
           setFranchiseCount(count);
         } else {
-          // Fallback to API if database not initialized
           const response = await franchisesAPI.getAll({ search: searchTerm });
           setFranchises(response.data.franchises);
         }
@@ -218,13 +232,11 @@ const EnforcerDashboard = () => {
   const handleAcceptInvestigation = async (investigationId) => {
     try {
       await investigationsAPI.accept(investigationId);
-      setMessage('Investigation accepted successfully!');
+      showSuccess('Investigation accepted successfully!');
       loadData();
-      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Error accepting investigation:', error);
-      setMessage('Failed to accept investigation');
-      setTimeout(() => setMessage(''), 3000);
+      showError('Failed to accept investigation');
     }
   };
 
@@ -257,7 +269,7 @@ const EnforcerDashboard = () => {
       const token = localStorage.getItem('token');
       const result = await syncWithAPI(token);
       if (result.success) {
-        setMessage(`Synced ${result.count} franchises from server`);
+        showSuccess(`Synced ${result.count} franchises from server`);
         setLastSyncTime(result.timestamp);
         const count = getFranchiseCount();
         setFranchiseCount(count);
@@ -265,15 +277,13 @@ const EnforcerDashboard = () => {
         const results = searchLocalFranchises(searchTerm);
         setFranchises(results);
       } else {
-        setMessage('Sync failed: ' + result.error);
+        showError('Sync failed: ' + result.error);
       }
       setSyncStatus('synced');
-      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Sync error:', error);
-      setMessage('Sync failed');
+      showError('Sync failed');
       setSyncStatus('error');
-      setTimeout(() => setMessage(''), 3000);
     }
   };
 
@@ -281,15 +291,13 @@ const EnforcerDashboard = () => {
     try {
       const success = exportToCSV(franchises);
       if (success) {
-        setMessage('Franchise data exported to CSV');
+        showSuccess('Franchise data exported to CSV');
       } else {
-        setMessage('Export failed');
+        showError('Export failed');
       }
-      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Export error:', error);
-      setMessage('Export failed');
-      setTimeout(() => setMessage(''), 3000);
+      showError('Export failed');
     }
   };
 
@@ -353,7 +361,7 @@ const EnforcerDashboard = () => {
   const handleSubmitTicket = async (investigationId) => {
     try {
       console.log('Submitting ticket for investigation:', investigationId);
-      
+
       const checkedViolations = Object.entries(ticketForm.violations)
         .filter(([_, data]) => data.checked)
         .map(([type, data]) => ({
@@ -367,11 +375,12 @@ const EnforcerDashboard = () => {
 
       console.log('Checked violations:', checkedViolations);
 
+
       if (checkedViolations.length === 0) {
-        setMessage('Please select at least one violation');
-        setTimeout(() => setMessage(''), 3000);
+        showError('Please select at least one violation');
         return;
       }
+
 
       console.log('Submitting ticket data:', {
         investigationId,
@@ -387,7 +396,7 @@ const EnforcerDashboard = () => {
 
       console.log('Ticket submitted successfully:', response.data);
 
-      setMessage('Ticket submitted successfully!');
+      showSuccess('Ticket submitted successfully!');
       setSelectedInvestigation(null);
       setTicketForm({
         violations: {
@@ -405,12 +414,10 @@ const EnforcerDashboard = () => {
         additionalNotes: ''
       });
       loadData();
-      setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Error submitting ticket:', error);
       console.error('Error response:', error.response?.data);
-      setMessage(error.response?.data?.message || 'Failed to submit ticket');
-      setTimeout(() => setMessage(''), 3000);
+      showError(error.response?.data?.message || 'Failed to submit ticket');
     }
   };
 
@@ -433,7 +440,7 @@ const EnforcerDashboard = () => {
   };
 
   const formatViolationType = (type) => {
-    return type.replace(/_/g, ' ').split(' ').map(word => 
+    return type.replace(/_/g, ' ').split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -467,35 +474,15 @@ const EnforcerDashboard = () => {
         </div>
       </div>
 
-      <div className="dashboard-content">
-        <div className="tabs">
-          <button 
-            className={activeTab === 'available' ? 'active' : ''}
-            onClick={() => setActiveTab('available')}
-          >
-            Available Investigations
-          </button>
-          <button 
-            className={activeTab === 'myInvestigations' ? 'active' : ''}
-            onClick={() => setActiveTab('myInvestigations')}
-          >
-            My Investigations
-          </button>
-          <button 
-            className={activeTab === 'myTickets' ? 'active' : ''}
-            onClick={() => setActiveTab('myTickets')}
-          >
-            My Tickets
-          </button>
-          <button 
-            className={activeTab === 'franchises' ? 'active' : ''}
-            onClick={() => setActiveTab('franchises')}
-          >
-            Franchise Database
-          </button>
-        </div>
-
-        {message && <div className="success-message">{message}</div>}
+      <div className={`dashboard-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* Sidebar Navigation */}
+        <Sidebar
+          activeSection={activeTab}
+          onSectionChange={setActiveTab}
+          userRole="enforcer"
+          isCollapsed={sidebarCollapsed}
+          toggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
         {activeTab === 'available' && (
           <div>
@@ -504,8 +491,8 @@ const EnforcerDashboard = () => {
               {availableInvestigations.map(investigation => {
                 const isExpanded = expandedInvestigation === investigation._id;
                 return (
-                  <div 
-                    key={investigation._id} 
+                  <div
+                    key={investigation._id}
                     className="card complaint-card quest-card"
                     onClick={() => setExpandedInvestigation(isExpanded ? null : investigation._id)}
                     style={{ cursor: 'pointer' }}
@@ -517,14 +504,14 @@ const EnforcerDashboard = () => {
                           Franchise: {investigation.franchiseNumber || investigation.complaint?.franchiseNumber} • {investigation.complaint?.category ? investigation.complaint.category.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Manual Investigation'}
                         </p>
                       </div>
-                      <span 
-                        className="status-badge" 
+                      <span
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(investigation.status) }}
                       >
                         {investigation.status.replace('_', ' ').toUpperCase()}
                       </span>
                     </div>
-                    
+
                     {isExpanded && (
                       <div className="complaint-details" onClick={(e) => e.stopPropagation()}>
                         <p><strong>Complaint:</strong> {investigation.complaint?.complaintNumber}</p>
@@ -537,7 +524,7 @@ const EnforcerDashboard = () => {
                           <p><strong>Investigation Instructions:</strong></p>
                           <p>{investigation.instructions || `Conduct on-site investigation of franchise #${investigation.complaint?.franchiseNumber} and verify all reported issues.`}</p>
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAcceptInvestigation(investigation._id);
@@ -561,15 +548,15 @@ const EnforcerDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'myInvestigations' && (
+        {(activeTab === 'myInvestigations' || activeTab === 'completedInvestigations') && (
           <div>
-            <h2>My Active Investigations</h2>
+            <h2>{activeTab === 'myInvestigations' ? 'My Active Investigations' : 'Completed Investigations'}</h2>
             <div className="investigations-list">
               {myInvestigations.map(investigation => {
                 const isExpanded = expandedInvestigation === investigation._id;
                 return (
-                  <div 
-                    key={investigation._id} 
+                  <div
+                    key={investigation._id}
                     className="card quest-card"
                     onClick={() => setExpandedInvestigation(isExpanded ? null : investigation._id)}
                     style={{ cursor: 'pointer' }}
@@ -581,8 +568,8 @@ const EnforcerDashboard = () => {
                           Franchise: {investigation.franchiseNumber || investigation.complaint?.franchiseNumber} • {investigation.complaint?.category ? investigation.complaint.category.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Manual Investigation'}
                         </p>
                       </div>
-                      <span 
-                        className="status-badge" 
+                      <span
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(investigation.status) }}
                       >
                         {investigation.status.replace('_', ' ').toUpperCase()}
@@ -603,121 +590,121 @@ const EnforcerDashboard = () => {
                         </div>
 
                         {selectedInvestigation === investigation._id ? (
-                      <div className="ticket-form" onClick={(e) => e.stopPropagation()}>
-                        <h4>Submit Violation Ticket</h4>
-                        
-                        <div>
-                          <h5>Violations Checklist:</h5>
-                          <div className="violations-list">
-                            {Object.entries(violationCategories).map(([category, violations]) => (
-                              <div key={category} className="violation-category">
-                                <h6 className="violation-category-title">{category}</h6>
-                                {violations.map(violationType => (
-                                  <div key={violationType} className="violation-item">
-                                    <label className="violation-checkbox">
-                                      <input
-                                        type="checkbox"
-                                        checked={ticketForm.violations[violationType]?.checked || false}
-                                        onChange={(e) => handleViolationChange(violationType, 'checked', e.target.checked)}
-                                      />
-                                      <strong>{formatViolationType(violationType)}</strong>
-                                    </label>
-                                    {ticketForm.violations[violationType]?.checked && (
-                                      <div className="violation-expanded">
-                                        <textarea
-                                          className="violation-notes"
-                                          placeholder="Notes about this violation..."
-                                          value={ticketForm.violations[violationType].notes}
-                                          onChange={(e) => handleViolationChange(violationType, 'notes', e.target.value)}
-                                          rows="2"
-                                        />
-                                        
-                                        <div className="violation-photo-upload">
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={(e) => handleFileUpload(violationType, e)}
-                                            className="file-input"
-                                            id={`evidence-${violationType}`}
-                                          />
-                                          <label htmlFor={`evidence-${violationType}`} className="file-upload-btn-small">
-                                            📷 Add Photos
-                                          </label>
-                                        </div>
+                          <div className="ticket-form" onClick={(e) => e.stopPropagation()}>
+                            <h4>Submit Violation Ticket</h4>
 
-                                        {ticketForm.violations[violationType].photos.length > 0 && (
-                                          <div className="violation-photos-grid">
-                                            {ticketForm.violations[violationType].photos.map((photo, photoIndex) => (
-                                              <div key={photoIndex} className="violation-photo-item">
-                                                <img src={photo.preview} alt={photo.name} />
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeEvidence(violationType, photoIndex);
-                                                  }}
-                                                  className="remove-photo-btn"
-                                                >
-                                                  ✕
-                                                </button>
+                            <div>
+                              <h5>Violations Checklist:</h5>
+                              <div className="violations-list">
+                                {Object.entries(violationCategories).map(([category, violations]) => (
+                                  <div key={category} className="violation-category">
+                                    <h6 className="violation-category-title">{category}</h6>
+                                    {violations.map(violationType => (
+                                      <div key={violationType} className="violation-item">
+                                        <label className="violation-checkbox">
+                                          <input
+                                            type="checkbox"
+                                            checked={ticketForm.violations[violationType]?.checked || false}
+                                            onChange={(e) => handleViolationChange(violationType, 'checked', e.target.checked)}
+                                          />
+                                          <strong>{formatViolationType(violationType)}</strong>
+                                        </label>
+                                        {ticketForm.violations[violationType]?.checked && (
+                                          <div className="violation-expanded">
+                                            <textarea
+                                              className="violation-notes"
+                                              placeholder="Notes about this violation..."
+                                              value={ticketForm.violations[violationType].notes}
+                                              onChange={(e) => handleViolationChange(violationType, 'notes', e.target.value)}
+                                              rows="2"
+                                            />
+
+                                            <div className="violation-photo-upload">
+                                              <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => handleFileUpload(violationType, e)}
+                                                className="file-input"
+                                                id={`evidence-${violationType}`}
+                                              />
+                                              <label htmlFor={`evidence-${violationType}`} className="file-upload-btn-small">
+                                                📷 Add Photos
+                                              </label>
+                                            </div>
+
+                                            {ticketForm.violations[violationType].photos.length > 0 && (
+                                              <div className="violation-photos-grid">
+                                                {ticketForm.violations[violationType].photos.map((photo, photoIndex) => (
+                                                  <div key={photoIndex} className="violation-photo-item">
+                                                    <img src={photo.preview} alt={photo.name} />
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeEvidence(violationType, photoIndex);
+                                                      }}
+                                                      className="remove-photo-btn"
+                                                    >
+                                                      ✕
+                                                    </button>
+                                                  </div>
+                                                ))}
                                               </div>
-                                            ))}
+                                            )}
                                           </div>
                                         )}
                                       </div>
-                                    )}
+                                    ))}
                                   </div>
                                 ))}
                               </div>
-                            ))}
+                            </div>
+
+                            <div className="additional-notes-section">
+                              <label>Additional Notes:</label>
+                              <textarea
+                                className="additional-notes-textarea"
+                                value={ticketForm.additionalNotes}
+                                onChange={(e) => setTicketForm(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                                placeholder="Any additional observations or notes..."
+                                rows="3"
+                              />
+                            </div>
+
+                            <div className="ticket-actions">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSubmitTicket(investigation._id);
+                                }}
+                                className="btn-primary"
+                              >
+                                Submit Ticket
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedInvestigation(null);
+                                }}
+                                className="btn-secondary"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="additional-notes-section">
-                          <label>Additional Notes:</label>
-                          <textarea
-                            className="additional-notes-textarea"
-                            value={ticketForm.additionalNotes}
-                            onChange={(e) => setTicketForm(prev => ({ ...prev, additionalNotes: e.target.value }))}
-                            placeholder="Any additional observations or notes..."
-                            rows="3"
-                          />
-                        </div>
-
-                        <div className="ticket-actions">
-                          <button 
+                        ) : (
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleSubmitTicket(investigation._id);
+                              setSelectedInvestigation(investigation._id);
                             }}
                             className="btn-primary"
+                            style={{ marginTop: '1rem' }}
                           >
-                            Submit Ticket
+                            Create Violation Ticket
                           </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedInvestigation(null);
-                            }}
-                            className="btn-secondary"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedInvestigation(investigation._id);
-                        }}
-                        className="btn-primary"
-                        style={{ marginTop: '1rem' }}
-                      >
-                        Create Violation Ticket
-                      </button>
-                    )}
+                        )}
                       </div>
                     )}
                   </div>
@@ -739,8 +726,8 @@ const EnforcerDashboard = () => {
               {myTickets.length > 0 ? (
                 <>
                   {myTickets.map(ticket => (
-                    <div 
-                      key={ticket._id} 
+                    <div
+                      key={ticket._id}
                       className="card complaint-card quest-card"
                       onClick={() => setSelectedTicket(ticket)}
                       style={{ cursor: 'pointer' }}
@@ -752,8 +739,8 @@ const EnforcerDashboard = () => {
                             Franchise: {ticket.franchiseNumber} • {ticket.violations?.length || 0} Violations
                           </p>
                         </div>
-                        <span 
-                          className="status-badge" 
+                        <span
+                          className="status-badge"
                           style={{ backgroundColor: getStatusColor(ticket.status) }}
                         >
                           {ticket.status.replace('_', ' ').toUpperCase()}
@@ -789,9 +776,9 @@ const EnforcerDashboard = () => {
                       <p><strong>Ticket Number:</strong> {selectedTicket.ticketNumber}</p>
                       <p><strong>Franchise Number:</strong> {selectedTicket.franchiseNumber}</p>
                       <p><strong>Investigation:</strong> {selectedTicket.investigation?.investigationNumber || 'N/A'}</p>
-                      <p><strong>Status:</strong> 
-                        <span 
-                          className="status-badge" 
+                      <p><strong>Status:</strong>
+                        <span
+                          className="status-badge"
                           style={{ backgroundColor: getStatusColor(selectedTicket.status), marginLeft: '0.5rem' }}
                         >
                           {selectedTicket.status.replace('_', ' ').toUpperCase()}
@@ -812,8 +799,8 @@ const EnforcerDashboard = () => {
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', marginTop: '8px' }}>
                                 {violation.photos.map((photo, photoIndex) => (
                                   <div key={photoIndex}>
-                                    <img 
-                                      src={photo.url} 
+                                    <img
+                                      src={photo.url}
                                       alt={`Evidence ${photoIndex + 1}`}
                                       style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #ddd' }}
                                     />
@@ -857,10 +844,10 @@ const EnforcerDashboard = () => {
         {activeTab === 'franchises' && (
           <div>
             <h2>Franchise Database (Offline Mode)</h2>
-            <div className="database-info" style={{ 
-              background: '#f4a261', 
-              padding: '10px', 
-              borderRadius: '5px', 
+            <div className="database-info" style={{
+              background: '#f4a261',
+              padding: '10px',
+              borderRadius: '5px',
               marginBottom: '15px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -875,16 +862,16 @@ const EnforcerDashboard = () => {
                 )}
               </div>
               <div>
-                <button 
-                  onClick={handleSyncNow} 
+                <button
+                  onClick={handleSyncNow}
                   className="btn-secondary"
                   style={{ marginRight: '10px', padding: '5px 15px' }}
                   disabled={!isOnline}
                 >
                   🔄 Sync Now
                 </button>
-                <button 
-                  onClick={handleExportCSV} 
+                <button
+                  onClick={handleExportCSV}
                   className="btn-secondary"
                   style={{ padding: '5px 15px' }}
                 >
@@ -914,8 +901,8 @@ const EnforcerDashboard = () => {
                     <p><strong>Vehicles:</strong> {franchise.vehicleCount}</p>
                     <p>
                       <strong>Status:</strong>{' '}
-                      <span 
-                        className="status-badge" 
+                      <span
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(franchise.status) }}
                       >
                         {franchise.status.charAt(0).toUpperCase() + franchise.status.slice(1)}

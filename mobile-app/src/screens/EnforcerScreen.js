@@ -20,11 +20,13 @@ import { searchFranchises, getFranchiseCount } from '../database/franchises';
 import { syncWithAPI, loadInitialData } from '../database/sync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import Sidebar from '../components/Sidebar';
 
 const EnforcerScreen = ({ navigation }) => {
   const { user } = useAuth();
-  
+
   // State management
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('available');
   const [availableInvestigations, setAvailableInvestigations] = useState([]);
   const [myInvestigations, setMyInvestigations] = useState([]);
@@ -33,13 +35,13 @@ const EnforcerScreen = ({ navigation }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Database states
   const [dbInitialized, setDbInitialized] = useState(false);
   const [franchiseCount, setFranchiseCount] = useState(0);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [syncStatus, setSyncStatus] = useState('synced');
-  
+
   // UI states
   const [expandedInvestigation, setExpandedInvestigation] = useState(null);
   const [selectedInvestigation, setSelectedInvestigation] = useState(null);
@@ -52,7 +54,7 @@ const EnforcerScreen = ({ navigation }) => {
     const { width, height } = Dimensions.get('window');
     setIsLandscape(width > height);
   };
-  
+
   // Violation categories - separated by Driver and Vehicle
   const violationCategories = {
     'Driver Violations': [
@@ -143,7 +145,7 @@ const EnforcerScreen = ({ navigation }) => {
         if (token) {
           setSyncStatus('syncing...');
           const syncResult = await syncWithAPI(token);
-          
+
           if (syncResult.success && syncResult.count > 0) {
             setFranchiseCount(syncResult.count);
             setLastSyncTime(syncResult.timestamp);
@@ -246,7 +248,7 @@ const EnforcerScreen = ({ navigation }) => {
 
       if (!result.didCancel && result.assets && result.assets[0]) {
         const base64Image = `data:${result.assets[0].type};base64,${result.assets[0].base64}`;
-        
+
         setTicketForm(prev => ({
           ...prev,
           violations: {
@@ -289,14 +291,14 @@ const EnforcerScreen = ({ navigation }) => {
       });
 
       Alert.alert('Success', 'Ticket submitted successfully!');
-      
+
       // Reset form
       const resetViolations = {};
       allViolationTypes.forEach(type => {
         resetViolations[type] = { checked: false, notes: '', photos: [] };
       });
       setTicketForm({ violations: resetViolations, additionalNotes: '' });
-      
+
       setShowTicketForm(false);
       setSelectedInvestigation(null);
       setActiveTab('myTickets');
@@ -329,7 +331,7 @@ const EnforcerScreen = ({ navigation }) => {
 
       setSyncStatus('syncing...');
       const result = await syncWithAPI(token);
-      
+
       if (result.success) {
         setFranchiseCount(result.count);
         setSyncStatus('synced');
@@ -359,11 +361,25 @@ const EnforcerScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <Sidebar
+        visible={isSidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+        onNavigate={setActiveTab}
+        activeItem={activeTab}
+        userRole="enforcer"
+        userName={user?.firstName}
+      />
+
       {/* Header */}
       <View style={[styles.header, isLandscape && styles.headerLandscape]}>
-        <View style={isLandscape && styles.headerLeftLandscape}>
-          <Text style={styles.headerTitle}>🚲 Pedicab Enforcer</Text>
-          <Text style={styles.headerSubtitle}>Welcome, {user?.firstName || 'Enforcer'}!</Text>
+        <View style={[styles.headerLeft, isLandscape && styles.headerLeftLandscape]}>
+          <TouchableOpacity onPress={() => setSidebarVisible(true)}>
+            <Text style={styles.hamburgerIcon}>☰</Text>
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Pedicab Enforcer</Text>
+            <Text style={styles.headerSubtitle}>Welcome, {user?.firstName || 'Enforcer'}!</Text>
+          </View>
         </View>
         <View style={[styles.headerRight, isLandscape && styles.headerRightLandscape]}>
           <View style={[styles.connectivityStatus, isLandscape && styles.connectivityStatusLandscape]}>
@@ -380,25 +396,7 @@ const EnforcerScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {[
-          { key: 'available', label: 'Available' },
-          { key: 'myInvestigations', label: 'My Investigations' },
-          { key: 'myTickets', label: 'My Tickets' },
-          { key: 'franchises', label: 'Franchises' }
-        ].map(tab => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.activeTab]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Tabs - Removed in favor of Sidebar */}
 
       <ScrollView
         style={styles.content}
@@ -425,14 +423,14 @@ const EnforcerScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(inv.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.franchiseNum}>
                     Franchise #{inv.franchiseNumber || inv.complaint?.franchiseNumber || 'N/A'}
                   </Text>
                   <Text style={styles.category}>
                     {inv.complaint?.category || 'Manual Investigation'}
                   </Text>
-                  
+
                   {expandedInvestigation === inv._id && (
                     <View style={styles.expandedContent}>
                       {inv.complaint && (
@@ -443,14 +441,14 @@ const EnforcerScreen = ({ navigation }) => {
                           <Text style={styles.detailText}>{inv.complaint.description}</Text>
                         </View>
                       )}
-                      
+
                       <View style={styles.section}>
                         <Text style={styles.sectionLabel}>Investigation Instructions:</Text>
                         <Text style={styles.instructionText}>
                           {inv.description || 'Conduct thorough investigation of the franchise.'}
                         </Text>
                       </View>
-                      
+
                       <TouchableOpacity
                         style={styles.acceptButton}
                         onPress={() => handleAcceptInvestigation(inv._id)}
@@ -486,14 +484,14 @@ const EnforcerScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(inv.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.franchiseNum}>
                     Franchise #{inv.franchiseNumber || inv.complaint?.franchiseNumber || 'N/A'}
                   </Text>
                   <Text style={styles.category}>
                     {inv.complaint?.category || 'Manual Investigation'}
                   </Text>
-                  
+
                   {expandedInvestigation === inv._id && (
                     <View style={styles.expandedContent}>
                       {inv.complaint && (
@@ -504,7 +502,7 @@ const EnforcerScreen = ({ navigation }) => {
                           <Text style={styles.detailText}>{inv.complaint.description}</Text>
                         </View>
                       )}
-                      
+
                       <View style={styles.section}>
                         <Text style={styles.sectionLabel}>Investigation Instructions:</Text>
                         <Text style={styles.instructionText}>
@@ -513,7 +511,7 @@ const EnforcerScreen = ({ navigation }) => {
                       </View>
                     </View>
                   )}
-                  
+
                   {inv.status === 'accepted' && (
                     <TouchableOpacity
                       style={styles.submitButton}
@@ -552,7 +550,7 @@ const EnforcerScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(ticket.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.franchiseNum}>Franchise #{ticket.franchiseNumber}</Text>
                   <Text style={styles.detailText}>
                     {ticket.violations?.length || 0} violation(s) reported
@@ -570,7 +568,7 @@ const EnforcerScreen = ({ navigation }) => {
         {activeTab === 'franchises' && (
           <View style={styles.tabContent}>
             <Text style={styles.sectionTitle}>Franchise Database (Offline Mode)</Text>
-            
+
             <View style={styles.statusBar}>
               <Text style={styles.statusBarText}>
                 {franchiseCount} franchises • {syncStatus}
@@ -607,7 +605,7 @@ const EnforcerScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(franchise.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.ownerName}>{franchise.ownerName}</Text>
                   <Text style={styles.franchiseDetail}>📞 {franchise.contactNumber}</Text>
                   <Text style={styles.franchiseDetail}>📍 {franchise.address}</Text>
@@ -636,11 +634,11 @@ const EnforcerScreen = ({ navigation }) => {
 
           <ScrollView style={styles.modalContent}>
             <Text style={styles.formSectionTitle}>Select Violations (at least 1):</Text>
-            
+
             {Object.entries(violationCategories).map(([category, violations]) => (
               <View key={category} style={styles.violationCategory}>
                 <Text style={styles.violationCategoryTitle}>{category}</Text>
-                
+
                 {violations.map((violationType) => (
                   <View key={violationType} style={styles.violationSection}>
                     <TouchableOpacity
@@ -693,7 +691,7 @@ const EnforcerScreen = ({ navigation }) => {
                             }));
                           }}
                         />
-                        
+
                         <TouchableOpacity
                           style={styles.photoButton}
                           onPress={() => handlePhotoUpload(violationType)}
@@ -702,7 +700,7 @@ const EnforcerScreen = ({ navigation }) => {
                             📷 Add Photo ({ticketForm.violations[violationType]?.photos?.length || 0})
                           </Text>
                         </TouchableOpacity>
-                        
+
                         {ticketForm.violations[violationType]?.photos?.length > 0 && (
                           <View style={styles.photoGrid}>
                             {ticketForm.violations[violationType].photos.map((photo, idx) => (
@@ -852,6 +850,9 @@ const styles = StyleSheet.create({
   },
   online: { backgroundColor: '#4caf50' },
   wifiIcon: { fontSize: 18 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerLeftLandscape: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
+  hamburgerIcon: { fontSize: 30, marginRight: 15, color: 'white', fontWeight: 'bold' },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
   headerSubtitle: { fontSize: 13, color: 'white', marginTop: 5 },
   signOutButton: {
@@ -941,14 +942,14 @@ const styles = StyleSheet.create({
   },
   formSectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#333', marginTop: 15, marginBottom: 10 },
   violationCategory: { marginBottom: 20 },
-  violationCategoryTitle: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    color: '#ff8c42', 
-    backgroundColor: '#fff3e0', 
-    paddingVertical: 8, 
-    paddingHorizontal: 12, 
-    borderRadius: 6, 
+  violationCategoryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ff8c42',
+    backgroundColor: '#fff3e0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     marginBottom: 10,
     marginTop: 5
   },

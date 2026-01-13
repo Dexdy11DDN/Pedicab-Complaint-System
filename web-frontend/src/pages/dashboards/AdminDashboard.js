@@ -5,8 +5,10 @@ import { complaintsAPI, franchisesAPI, investigationsAPI, ticketsAPI, authAPI } 
 import { FaWifi } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
+import Sidebar from '../../components/Sidebar';
+import { useToast, handleApiError } from '../../components/ErrorToast';
 import { initDatabase } from '../../database/init';
-import { searchFranchises as searchLocalFranchises, getFranchiseCount, addFranchises } from '../../database/franchises';
+import { searchFranchises as searchLocalFranchises, getFranchiseCount } from '../../database/franchises';
 import { syncWithAPI, startAutoSync, stopAutoSync, loadInitialData } from '../../database/sync';
 import { groupViolationsByCategory, formatViolationType } from '../../utils/violations';
 import './Dashboard.css';
@@ -14,7 +16,9 @@ import './Dashboard.css';
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [investigations, setInvestigations] = useState([]);
   const [franchises, setFranchises] = useState([]);
   const [complaints, setComplaints] = useState([]);
@@ -24,6 +28,7 @@ const AdminDashboard = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState('synced');
   const [searchTerm, setSearchTerm] = useState('');
+  const [offenseFilter, setOffenseFilter] = useState('all');
   const [dbInitialized, setDbInitialized] = useState(false);
   const [franchiseCount, setFranchiseCount] = useState(0);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -31,6 +36,7 @@ const AdminDashboard = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedInvestigation, setSelectedInvestigation] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedFranchise, setSelectedFranchise] = useState(null);
   const [showInvestigationForm, setShowInvestigationForm] = useState(false);
   const [investigationForm, setInvestigationForm] = useState({ franchiseNumber: '', description: '', instructions: '', complaintId: '' });
 
@@ -40,14 +46,14 @@ const AdminDashboard = () => {
         await initDatabase();
         setDbInitialized(true);
         console.log('Admin: SQLite database initialized');
-        
+
         // Check if database is empty (first run)
         const currentCount = getFranchiseCount();
-        
+
         const token = localStorage.getItem('token');
         if (token) {
           startAutoSync(token);
-          
+
           // If database is empty, try to sync from API first, then load sample data as fallback
           if (currentCount === 0) {
             console.log('Empty database detected - attempting to sync from API...');
@@ -77,10 +83,10 @@ const AdminDashboard = () => {
             setFranchiseCount(loadResult.count);
           }
         }
-        
+
         const count = getFranchiseCount();
         setFranchiseCount(count);
-        
+
         // Pre-load franchises for instant display when tab is clicked
         if (count > 0) {
           const results = searchLocalFranchises('');
@@ -91,9 +97,9 @@ const AdminDashboard = () => {
         console.error('Admin: Database setup failed:', error);
       }
     };
-    
+
     setupDatabase();
-    
+
     return () => {
       stopAutoSync();
     };
@@ -143,10 +149,12 @@ const AdminDashboard = () => {
       } else if (activeTab === 'complaints') {
         const response = await complaintsAPI.getAll();
         console.log('Complaints response:', response.data);
-        setComplaints(response.data.complaints || []);
+        const sorted = (response.data.complaints || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setComplaints(sorted);
       } else if (activeTab === 'tickets') {
         const response = await ticketsAPI.getAll();
-        setTickets(response.data.tickets || []);
+        const sorted = (response.data.tickets || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setTickets(sorted);
       } else if (activeTab === 'overview') {
         const [investigationsRes, complaintsRes, ticketsRes, enforcersRes] = await Promise.all([
           investigationsAPI.getAll(),
@@ -159,9 +167,9 @@ const AdminDashboard = () => {
           complaints: complaintsRes.data.complaints?.length || 0,
           tickets: ticketsRes.data.tickets?.length || 0
         });
-        setInvestigations(investigationsRes.data.investigations || []);
-        setComplaints(complaintsRes.data.complaints || []);
-        setTickets(ticketsRes.data.tickets || []);
+        setInvestigations((investigationsRes.data.investigations || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        setComplaints((complaintsRes.data.complaints || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        setTickets((ticketsRes.data.tickets || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setEnforcers(enforcersRes.data.enforcers || []);
       }
       setSyncStatus('synced');
@@ -209,16 +217,16 @@ const AdminDashboard = () => {
         description: descriptionText.length > 200 ? descriptionText.substring(0, 200) + '...\n\n(Full details available in linked complaint)' : descriptionText,
         instructions: `1. Locate and visit franchise #${selectedComplaint.franchiseNumber} at the reported location\n2. Document all violations using photos and the checklist\n3. Interview the operator if present\n4. Submit a detailed ticket with all findings and evidence`
       };
-      
+
       console.log('Creating investigation with data:', investigationData);
-      
+
       const response = await investigationsAPI.create(investigationData);
       console.log('Investigation created:', response.data);
 
       // Update complaint status to investigating
       await complaintsAPI.updateStatus(selectedComplaint._id, 'investigating');
       console.log('Complaint status updated to investigating');
-      
+
       setMessage('Investigation request created successfully');
       setSelectedComplaint(null);
       loadData();
@@ -228,7 +236,7 @@ const AdminDashboard = () => {
       console.error('Error response:', error.response);
       console.error('Error data:', error.response?.data);
       console.error('Selected complaint:', selectedComplaint);
-      
+
       const errorMessage = error.response?.data?.message || error.message || 'Error creating investigation';
       setMessage(errorMessage);
       setTimeout(() => setMessage(''), 5000);
@@ -258,7 +266,7 @@ const AdminDashboard = () => {
 
   const handleDeleteInvestigation = async (id) => {
     if (!window.confirm('Are you sure you want to delete this investigation?')) return;
-    
+
     try {
       await investigationsAPI.delete(id);
       setMessage('Investigation deleted successfully');
@@ -315,15 +323,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const getSeverityColor = (severity) => {
-    const colors = {
-      minor: '#4caf50',
-      moderate: '#ff9800',
-      severe: '#ff5722',
-      critical: '#d32f2f'
-    };
-    return colors[severity] || '#999';
-  };
+
 
   const getStatusColor = (status) => {
     const colors = {
@@ -352,8 +352,40 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error searching franchises:', error);
+      showError(handleApiError(error));
     }
   };
+
+  const handleResetOffenses = async (franchiseNumber) => {
+    if (!window.confirm(`Are you sure you want to reset all offenses for franchise ${franchiseNumber}?`)) return;
+
+    try {
+      const response = await franchisesAPI.resetOffenses(franchiseNumber);
+      showSuccess(response.data.message);
+      setSelectedFranchise(null);
+      loadData();
+    } catch (error) {
+      console.error('Error resetting offenses:', error);
+      showError(handleApiError(error));
+    }
+  };
+
+  const handleSectionChange = (section) => {
+    if (section === 'enforcers') {
+      navigate('/enforcers');
+    } else {
+      setActiveTab(section);
+    }
+  };
+
+  // Filter franchises by offense status
+  const filteredFranchises = franchises.filter(f => {
+    if (offenseFilter === 'all') return true;
+    if (offenseFilter === 'threeStrikes') return f.hasThreeStrikes;
+    if (offenseFilter === 'hasOffenses') return (f.offenseCount || 0) > 0;
+    if (offenseFilter === 'clean') return (f.offenseCount || 0) === 0;
+    return true;
+  });
 
   return (
     <div className="dashboard">
@@ -384,45 +416,15 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="dashboard-content">
-        <div className="tabs">
-          <button 
-            className={activeTab === 'overview' ? 'active' : ''}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button 
-            className={activeTab === 'complaints' ? 'active' : ''}
-            onClick={() => setActiveTab('complaints')}
-          >
-            Manage Complaints
-          </button>
-          <button 
-            className={activeTab === 'tickets' ? 'active' : ''}
-            onClick={() => setActiveTab('tickets')}
-          >
-            Manage Tickets
-          </button>
-          <button 
-            className={activeTab === 'investigations' ? 'active' : ''}
-            onClick={() => setActiveTab('investigations')}
-          >
-            Manage Investigations
-          </button>
-          <button 
-            className={activeTab === 'franchises' ? 'active' : ''}
-            onClick={() => setActiveTab('franchises')}
-          >
-            Manage Franchises
-          </button>
-          <button 
-            onClick={() => navigate('/enforcers')}
-            style={{ marginLeft: 'auto' }}
-          >
-            🛡️ Manage Enforcers →
-          </button>
-        </div>
+      <div className={`dashboard-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* Sidebar Navigation */}
+        <Sidebar
+          activeSection={activeTab}
+          onSectionChange={handleSectionChange}
+          userRole="admin"
+          isCollapsed={sidebarCollapsed}
+          toggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
         {message && <div className="success-message">{message}</div>}
 
@@ -475,8 +477,8 @@ const AdminDashboard = () => {
                   <div className="col-time">Submitted</div>
                 </div>
                 {complaints.slice(0, 5).map(complaint => (
-                  <div 
-                    key={complaint._id} 
+                  <div
+                    key={complaint._id}
                     className="table-row table-row-compact"
                     onClick={() => setSelectedComplaint(complaint)}
                   >
@@ -484,8 +486,8 @@ const AdminDashboard = () => {
                     <div className="col-franchise">{complaint.franchiseNumber}</div>
                     <div className="col-type">{complaint.category.replace('_', ' ')}</div>
                     <div className="col-status">
-                      <span 
-                        className="compact-status-badge" 
+                      <span
+                        className="compact-status-badge"
                         style={{ backgroundColor: getStatusColor(complaint.status) }}
                       >
                         {complaint.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -520,8 +522,8 @@ const AdminDashboard = () => {
                   <div className="col-comment">Description</div>
                 </div>
                 {complaints.map(complaint => (
-                  <div 
-                    key={complaint._id} 
+                  <div
+                    key={complaint._id}
                     className="table-row"
                     onClick={() => setSelectedComplaint(complaint)}
                   >
@@ -530,8 +532,8 @@ const AdminDashboard = () => {
                     <div className="col-type">{complaint.category.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</div>
                     <div className="col-client">{complaint.client?.firstName} {complaint.client?.lastName}</div>
                     <div className="col-status">
-                      <span 
-                        className="compact-status-badge" 
+                      <span
+                        className="compact-status-badge"
                         style={{ backgroundColor: getStatusColor(complaint.status) }}
                       >
                         {complaint.status.replace('_', ' ')}
@@ -566,8 +568,8 @@ const AdminDashboard = () => {
                   <div className="col-time">Submitted</div>
                 </div>
                 {tickets.map(ticket => (
-                  <div 
-                    key={ticket._id} 
+                  <div
+                    key={ticket._id}
                     className="table-row"
                     onClick={() => setSelectedTicket(ticket)}
                   >
@@ -576,8 +578,8 @@ const AdminDashboard = () => {
                     <div className="col-enforcer">{ticket.enforcer?.firstName} {ticket.enforcer?.lastName}</div>
                     <div className="col-violations">{ticket.violations?.length || 0} violation(s)</div>
                     <div className="col-status">
-                      <span 
-                        className="compact-status-badge" 
+                      <span
+                        className="compact-status-badge"
                         style={{ backgroundColor: getStatusColor(ticket.status) }}
                       >
                         {ticket.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -597,7 +599,7 @@ const AdminDashboard = () => {
           <div>
             <div className="section-header">
               <h2>Manage Investigations</h2>
-              <button 
+              <button
                 onClick={() => setShowInvestigationForm(!showInvestigationForm)}
                 className="btn-new-complaint"
               >
@@ -614,7 +616,7 @@ const AdminDashboard = () => {
                     <input
                       type="text"
                       value={investigationForm.franchiseNumber}
-                      onChange={(e) => setInvestigationForm({...investigationForm, franchiseNumber: e.target.value})}
+                      onChange={(e) => setInvestigationForm({ ...investigationForm, franchiseNumber: e.target.value })}
                       placeholder="Enter 4-digit franchise number"
                       maxLength="4"
                       required
@@ -625,7 +627,7 @@ const AdminDashboard = () => {
                     <input
                       type="text"
                       value={investigationForm.complaintId}
-                      onChange={(e) => setInvestigationForm({...investigationForm, complaintId: e.target.value})}
+                      onChange={(e) => setInvestigationForm({ ...investigationForm, complaintId: e.target.value })}
                       placeholder="Related complaint ID (if any)"
                     />
                   </div>
@@ -633,7 +635,7 @@ const AdminDashboard = () => {
                     <label>Complaint Description *</label>
                     <textarea
                       value={investigationForm.description}
-                      onChange={(e) => setInvestigationForm({...investigationForm, description: e.target.value})}
+                      onChange={(e) => setInvestigationForm({ ...investigationForm, description: e.target.value })}
                       placeholder="Describe the complaint or issue details..."
                       rows="3"
                       required
@@ -643,8 +645,8 @@ const AdminDashboard = () => {
                     <label>Investigation Instructions *</label>
                     <textarea
                       value={investigationForm.instructions}
-                      onChange={(e) => setInvestigationForm({...investigationForm, instructions: e.target.value})}
-                      placeholder="Provide specific instructions for the enforcer (e.g., 'Conduct on-site inspection and verify all safety equipment...')" 
+                      onChange={(e) => setInvestigationForm({ ...investigationForm, instructions: e.target.value })}
+                      placeholder="Provide specific instructions for the enforcer (e.g., 'Conduct on-site inspection and verify all safety equipment...')"
                       rows="3"
                       required
                     />
@@ -668,9 +670,9 @@ const AdminDashboard = () => {
                     <div>Actions</div>
                   </div>
                   {investigations.map(inv => (
-                    <div 
-                      key={inv._id} 
-                      className="table-row" 
+                    <div
+                      key={inv._id}
+                      className="table-row"
                       style={{ gridTemplateColumns: '140px 100px 200px 150px 120px 80px', cursor: 'pointer' }}
                       onClick={() => setSelectedInvestigation(inv)}
                     >
@@ -683,14 +685,14 @@ const AdminDashboard = () => {
                         {truncateText(inv.description, 35)}
                       </div>
                       <div>
-                        {inv.acceptedBy ? 
-                          `${inv.acceptedBy.firstName} ${inv.acceptedBy.lastName}` : 
-                          <span style={{color: '#999', fontStyle: 'italic'}}>Not accepted yet</span>
+                        {inv.acceptedBy ?
+                          `${inv.acceptedBy.firstName} ${inv.acceptedBy.lastName}` :
+                          <span style={{ color: '#999', fontStyle: 'italic' }}>Not accepted yet</span>
                         }
                       </div>
                       <div className="col-status">
-                        <span 
-                          className="compact-status-badge" 
+                        <span
+                          className="compact-status-badge"
                           style={{ backgroundColor: getStatusColor(inv.status) }}
                         >
                           {inv.status}
@@ -718,10 +720,10 @@ const AdminDashboard = () => {
         {activeTab === 'franchises' && (
           <div>
             <h2>Franchise Database (Offline Mode)</h2>
-            <div className="database-info" style={{ 
-              background: '#f4a261', 
-              padding: '10px', 
-              borderRadius: '5px', 
+            <div className="database-info" style={{
+              background: '#f4a261',
+              padding: '10px',
+              borderRadius: '5px',
               marginBottom: '15px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -736,31 +738,29 @@ const AdminDashboard = () => {
                 )}
               </div>
               <div>
-                <button 
+                <button
                   onClick={async () => {
                     try {
                       setSyncStatus('syncing...');
                       const token = localStorage.getItem('token');
                       const result = await syncWithAPI(token);
                       if (result.success) {
-                        setMessage(`Synced ${result.count} franchises from server`);
+                        showSuccess(`Synced ${result.count} franchises from server`);
                         setLastSyncTime(result.timestamp);
                         const count = getFranchiseCount();
                         setFranchiseCount(count);
                         const results = searchLocalFranchises('');
                         setFranchises(results);
                       } else {
-                        setMessage('Sync failed: ' + result.error);
+                        showError('Sync failed: ' + result.error);
                       }
                       setSyncStatus('synced');
-                      setTimeout(() => setMessage(''), 3000);
                     } catch (error) {
                       console.error('Sync error:', error);
-                      setMessage('Sync failed');
+                      showError('Sync failed');
                       setSyncStatus('error');
-                      setTimeout(() => setMessage(''), 3000);
                     }
-                  }} 
+                  }}
                   className="btn-secondary"
                   style={{ padding: '5px 15px' }}
                   disabled={!isOnline}
@@ -769,20 +769,61 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </div>
-            <div className="search-bar">
+
+            {/* Search and Filter Bar */}
+            <div className="search-bar" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
               <input
                 type="text"
                 placeholder="Search by franchise number, owner name, or license..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearchFranchises()}
+                style={{ flex: 1 }}
               />
+              <select
+                value={offenseFilter}
+                onChange={(e) => setOffenseFilter(e.target.value)}
+                className="offense-filter-select"
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}
+              >
+                <option value="all">All Franchises</option>
+                <option value="threeStrikes">⚠️ 3 Strikes Only</option>
+                <option value="hasOffenses">Has Offenses</option>
+                <option value="clean">Clean Record</option>
+              </select>
               <button onClick={handleSearchFranchises} className="btn-primary">Search</button>
             </div>
+
+            {/* Franchise Cards */}
             <div className="franchises-list">
-              {franchises.map(franchise => (
-                <div key={franchise._id} className="card">
-                  <h3>{franchise.franchiseNumber}</h3>
+              {filteredFranchises.map(franchise => (
+                <div
+                  key={franchise._id}
+                  className={`card franchise-card ${franchise.hasThreeStrikes ? 'three-strikes' : ''} ${(franchise.offenseCount || 0) > 0 && !franchise.hasThreeStrikes ? 'has-offenses' : ''}`}
+                  onClick={() => setSelectedFranchise(franchise)}
+                  style={{
+                    cursor: 'pointer',
+                    borderLeft: franchise.hasThreeStrikes ? '4px solid #d32f2f' : (franchise.offenseCount || 0) > 0 ? '4px solid #ff9800' : '4px solid #4caf50'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3>{franchise.franchiseNumber}</h3>
+                    {(franchise.offenseCount || 0) > 0 && (
+                      <span
+                        className="offense-badge"
+                        style={{
+                          background: franchise.hasThreeStrikes ? '#d32f2f' : '#ff9800',
+                          color: 'white',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {franchise.hasThreeStrikes ? '⚠️ 3 STRIKES' : `${franchise.offenseCount} offense(s)`}
+                      </span>
+                    )}
+                  </div>
                   <div className="franchise-details">
                     <p><strong>Owner:</strong> {franchise.ownerName}</p>
                     <p><strong>License:</strong> {franchise.licenseNumber}</p>
@@ -791,8 +832,8 @@ const AdminDashboard = () => {
                     <p><strong>Vehicles:</strong> {franchise.vehicleCount}</p>
                     <p>
                       <strong>Status:</strong>{' '}
-                      <span 
-                        className="status-badge" 
+                      <span
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(franchise.status) }}
                       >
                         {franchise.status.toUpperCase()}
@@ -801,6 +842,83 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               ))}
+              {filteredFranchises.length === 0 && (
+                <p className="empty-state">No franchises match the current filter.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Franchise Offense History Modal */}
+        {selectedFranchise && (
+          <div className="modal-overlay" onClick={() => setSelectedFranchise(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+              <div className="modal-header">
+                <h2>Franchise #{selectedFranchise.franchiseNumber}</h2>
+                <button className="modal-close" onClick={() => setSelectedFranchise(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div style={{ marginBottom: '1rem' }}>
+                  <p><strong>Owner:</strong> {selectedFranchise.ownerName}</p>
+                  <p><strong>License:</strong> {selectedFranchise.licenseNumber}</p>
+                  <p><strong>Contact:</strong> {selectedFranchise.contactNumber}</p>
+                </div>
+
+                <div style={{
+                  background: selectedFranchise.hasThreeStrikes ? '#ffebee' : '#fff3e0',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: selectedFranchise.hasThreeStrikes ? '#d32f2f' : '#ff9800' }}>
+                    {selectedFranchise.hasThreeStrikes ? '⚠️ 3 STRIKES - HIGH RISK' : `Offense History (${selectedFranchise.offenseCount || 0})`}
+                  </h3>
+
+                  {(selectedFranchise.offenses && selectedFranchise.offenses.length > 0) ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {selectedFranchise.offenses.map((offense, idx) => (
+                        <div key={idx} style={{
+                          background: 'white',
+                          padding: '0.75rem',
+                          borderRadius: '6px',
+                          borderLeft: '3px solid #ff8c42'
+                        }}>
+                          <p style={{ margin: '0 0 0.25rem 0', fontWeight: 'bold' }}>
+                            📋 {offense.ticketNumber || 'Unknown Ticket'}
+                          </p>
+                          <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', color: '#666' }}>
+                            {new Date(offense.confirmedAt).toLocaleDateString()}
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                            {offense.violations?.map((v, vIdx) => (
+                              <span key={vIdx} style={{
+                                background: '#ffe0b2',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem'
+                              }}>
+                                {v}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, color: '#666' }}>No offense records found.</p>
+                  )}
+                </div>
+
+                {(selectedFranchise.offenseCount || 0) > 0 && (
+                  <button
+                    onClick={() => handleResetOffenses(selectedFranchise.franchiseNumber)}
+                    className="btn-danger-orange"
+                    style={{ width: '100%' }}
+                  >
+                    🗑️ Reset All Offenses (Testing)
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -836,8 +954,8 @@ const AdminDashboard = () => {
                 </div>
                 <div className="detail-row">
                   <strong>Status:</strong>
-                  <span 
-                    className="compact-status-badge" 
+                  <span
+                    className="compact-status-badge"
                     style={{ backgroundColor: getStatusColor(selectedComplaint.status) }}
                   >
                     {selectedComplaint.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -857,8 +975,8 @@ const AdminDashboard = () => {
                 </div>
                 <div className="detail-full">
                   <strong>Description:</strong>
-                  <p style={{ 
-                    whiteSpace: 'pre-wrap', 
+                  <p style={{
+                    whiteSpace: 'pre-wrap',
                     lineHeight: '1.6',
                     padding: '0.75rem',
                     backgroundColor: '#f9f9f9',
@@ -868,17 +986,17 @@ const AdminDashboard = () => {
                     {selectedComplaint.description}
                   </p>
                 </div>
-                
+
                 {selectedComplaint.status === 'submitted' && (
                   <div className="modal-actions">
-                    <button 
+                    <button
                       onClick={handleAcceptComplaint}
                       className="btn-success-orange"
                       style={{ flex: 1 }}
                     >
                       ✓ Accept Complaint
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleComplaintStatus(selectedComplaint._id, 'rejected')}
                       className="btn-danger-orange"
                       style={{ flex: 1 }}
@@ -890,7 +1008,7 @@ const AdminDashboard = () => {
 
                 {(selectedComplaint.status === 'under_review' || selectedComplaint.status === 'investigating') && (
                   <div className="modal-actions">
-                    <button 
+                    <button
                       onClick={handleCreateInvestigationFromComplaint}
                       className="btn-submit-orange"
                       style={{ flex: 1 }}
@@ -903,7 +1021,7 @@ const AdminDashboard = () => {
 
                 {selectedComplaint.status !== 'resolved' && selectedComplaint.status !== 'rejected' && selectedComplaint.status !== 'submitted' && (
                   <div className="modal-actions" style={{ marginTop: '0.5rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                    <button 
+                    <button
                       onClick={() => handleComplaintStatus(selectedComplaint._id, 'resolved')}
                       className="btn-success-orange"
                     >
@@ -947,8 +1065,8 @@ const AdminDashboard = () => {
                 </div>
                 <div className="detail-row">
                   <strong>Status:</strong>
-                  <span 
-                    className="compact-status-badge" 
+                  <span
+                    className="compact-status-badge"
                     style={{ backgroundColor: getStatusColor(selectedTicket.status) }}
                   >
                     {selectedTicket.status.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -958,7 +1076,7 @@ const AdminDashboard = () => {
                   <strong>Submitted:</strong>
                   <span>{new Date(selectedTicket.createdAt).toLocaleString()}</span>
                 </div>
-                
+
                 {selectedTicket.violations && selectedTicket.violations.length > 0 && (
                   <div className="detail-section">
                     <strong>Violations Found ({selectedTicket.violations.length}):</strong>
@@ -980,8 +1098,8 @@ const AdminDashboard = () => {
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', marginTop: '8px' }}>
                                     {violation.photos.map((photo, photoIndex) => (
                                       <div key={photoIndex} style={{ textAlign: 'center' }}>
-                                        <img 
-                                          src={photo.url} 
+                                        <img
+                                          src={photo.url}
                                           alt={`${violation.type} evidence ${photoIndex + 1}`}
                                           style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', border: '2px solid #ddd' }}
                                           onClick={() => setSelectedImage(photo.url)}
@@ -1013,8 +1131,8 @@ const AdminDashboard = () => {
                     <div className="evidence-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px', marginTop: '10px' }}>
                       {selectedTicket.evidence.map((item, index) => (
                         <div key={index} style={{ textAlign: 'center' }}>
-                          <img 
-                            src={item.url} 
+                          <img
+                            src={item.url}
                             alt={`Evidence ${index + 1}`}
                             style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '2px solid #ddd' }}
                             onClick={() => setSelectedImage(item.url)}
@@ -1041,10 +1159,10 @@ const AdminDashboard = () => {
                     <span>{selectedTicket.forwardedBy?.firstName} {selectedTicket.forwardedBy?.lastName} on {new Date(selectedTicket.forwardedDate).toLocaleString()}</span>
                   </div>
                 )}
-                
+
                 {selectedTicket.status === 'submitted' && (
                   <div className="modal-actions">
-                    <button 
+                    <button
                       onClick={() => handleForwardTicket(selectedTicket._id)}
                       className="btn-submit-orange"
                     >
@@ -1096,8 +1214,8 @@ const AdminDashboard = () => {
                 </div>
                 <div className="detail-row">
                   <strong>Status:</strong>
-                  <span 
-                    className="compact-status-badge" 
+                  <span
+                    className="compact-status-badge"
                     style={{ backgroundColor: getStatusColor(selectedInvestigation.status) }}
                   >
                     {selectedInvestigation.status}
@@ -1125,11 +1243,11 @@ const AdminDashboard = () => {
                   <strong>Created:</strong>
                   <span>{new Date(selectedInvestigation.createdAt).toLocaleString()}</span>
                 </div>
-                
+
                 <div className="detail-full">
                   <strong>Complaint Description:</strong>
-                  <p style={{ 
-                    whiteSpace: 'pre-wrap', 
+                  <p style={{
+                    whiteSpace: 'pre-wrap',
                     lineHeight: '1.6',
                     padding: '0.75rem',
                     backgroundColor: '#f9f9f9',
@@ -1143,8 +1261,8 @@ const AdminDashboard = () => {
                 {selectedInvestigation.instructions && (
                   <div className="detail-full">
                     <strong>Investigation Instructions:</strong>
-                    <p style={{ 
-                      whiteSpace: 'pre-wrap', 
+                    <p style={{
+                      whiteSpace: 'pre-wrap',
                       lineHeight: '1.6',
                       padding: '0.75rem',
                       backgroundColor: '#fff3e0',
@@ -1170,9 +1288,9 @@ const AdminDashboard = () => {
                 <button className="close-button" onClick={() => setSelectedImage(null)}>×</button>
               </div>
               <div style={{ padding: '20px', textAlign: 'center' }}>
-                <img 
-                  src={selectedImage} 
-                  alt="Evidence" 
+                <img
+                  src={selectedImage}
+                  alt="Evidence"
                   style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
                 />
               </div>

@@ -45,6 +45,31 @@ const franchiseSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  // Offense tracking
+  offenses: [{
+    ticketId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ticket'
+    },
+    ticketNumber: String,
+    violations: [String],
+    confirmedAt: {
+      type: Date,
+      default: Date.now
+    },
+    confirmedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
+  offenseCount: {
+    type: Number,
+    default: 0
+  },
+  hasThreeStrikes: {
+    type: Boolean,
+    default: false
+  },
   registrationDate: {
     type: Date,
     default: Date.now

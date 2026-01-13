@@ -7,10 +7,22 @@ const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 // Get all franchises (Enforcer and Admin)
 router.get('/', [authMiddleware, roleMiddleware('enforcer', 'admin')], async (req, res) => {
   try {
-    const { status, search, page = 1, limit = 10 } = req.query;
+    const { status, search, hasOffenses, threeStrikes, page = 1, limit = 100 } = req.query;
     const filter = {};
 
     if (status) filter.status = status;
+
+    // Offense filtering
+    if (hasOffenses === 'true') {
+      filter.offenseCount = { $gt: 0 };
+    } else if (hasOffenses === 'false') {
+      filter.offenseCount = 0;
+    }
+
+    if (threeStrikes === 'true') {
+      filter.hasThreeStrikes = true;
+    }
+
     if (search) {
       filter.$or = [
         { franchiseNumber: { $regex: search, $options: 'i' } },
@@ -40,13 +52,93 @@ router.get('/', [authMiddleware, roleMiddleware('enforcer', 'admin')], async (re
 // Get franchise by number (Enforcer and Admin)
 router.get('/:franchiseNumber', [authMiddleware, roleMiddleware('enforcer', 'admin')], async (req, res) => {
   try {
-    const franchise = await Franchise.findOne({ franchiseNumber: req.params.franchiseNumber });
+    const franchise = await Franchise.findOne({ franchiseNumber: req.params.franchiseNumber })
+      .populate('offenses.confirmedBy', 'firstName lastName');
 
     if (!franchise) {
       return res.status(404).json({ message: 'Franchise not found' });
     }
 
     res.json(franchise);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get offense history for a franchise (Enforcer and Admin)
+router.get('/:franchiseNumber/offenses', [authMiddleware, roleMiddleware('enforcer', 'admin')], async (req, res) => {
+  try {
+    const franchise = await Franchise.findOne({ franchiseNumber: req.params.franchiseNumber })
+      .populate('offenses.confirmedBy', 'firstName lastName');
+
+    if (!franchise) {
+      return res.status(404).json({ message: 'Franchise not found' });
+    }
+
+    res.json({
+      franchiseNumber: franchise.franchiseNumber,
+      ownerName: franchise.ownerName,
+      offenseCount: franchise.offenseCount,
+      hasThreeStrikes: franchise.hasThreeStrikes,
+      offenses: franchise.offenses
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Reset all offenses for a franchise (Admin only)
+router.delete('/:franchiseNumber/offenses', [authMiddleware, roleMiddleware('admin')], async (req, res) => {
+  try {
+    const franchise = await Franchise.findOne({ franchiseNumber: req.params.franchiseNumber });
+
+    if (!franchise) {
+      return res.status(404).json({ message: 'Franchise not found' });
+    }
+
+    const previousCount = franchise.offenseCount;
+    franchise.offenses = [];
+    franchise.offenseCount = 0;
+    franchise.hasThreeStrikes = false;
+
+    await franchise.save();
+
+    res.json({
+      message: `Reset ${previousCount} offense(s) for franchise ${req.params.franchiseNumber}`,
+      franchise
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Remove a specific offense (Admin only)
+router.delete('/:franchiseNumber/offenses/:offenseId', [authMiddleware, roleMiddleware('admin')], async (req, res) => {
+  try {
+    const franchise = await Franchise.findOne({ franchiseNumber: req.params.franchiseNumber });
+
+    if (!franchise) {
+      return res.status(404).json({ message: 'Franchise not found' });
+    }
+
+    const offenseIndex = franchise.offenses.findIndex(
+      o => o._id.toString() === req.params.offenseId
+    );
+
+    if (offenseIndex === -1) {
+      return res.status(404).json({ message: 'Offense not found' });
+    }
+
+    franchise.offenses.splice(offenseIndex, 1);
+    franchise.offenseCount = franchise.offenses.length;
+    franchise.hasThreeStrikes = franchise.offenseCount >= 3;
+
+    await franchise.save();
+
+    res.json({
+      message: 'Offense removed successfully',
+      franchise
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

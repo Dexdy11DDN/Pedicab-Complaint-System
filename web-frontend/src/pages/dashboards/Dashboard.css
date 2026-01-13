@@ -25,7 +25,7 @@
 }
 
 .btn-logout {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 1px solid white;
   padding: 0.5rem 1rem;
@@ -35,13 +35,33 @@
 }
 
 .btn-logout:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .dashboard-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  padding-top: 100px;
+  /* 80px header + 20px gap */
+  margin-left: 250px;
+  /* Default sidebar width */
+  transition: margin-left 0.3s ease;
+}
+
+.dashboard-content.sidebar-collapsed {
+  margin-left: 60px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    margin-left: 0;
+    padding-top: 100px;
+  }
+
+  .dashboard-content.sidebar-collapsed {
+    margin-left: 0;
+  }
 }
 
 .dashboard-header {
@@ -60,7 +80,7 @@
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
 }
 
@@ -209,7 +229,7 @@
   background: white;
   padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
@@ -326,13 +346,21 @@
 
 /* Orange-Beige Theme Styles */
 .streamlined-header {
+  position: fixed;
+  top: 0;
+  left: 0 !important;
+  margin: 0;
+  width: 100vw;
+  height: 80px;
   background: linear-gradient(135deg, #ff8c42 0%, #f4a261 100%);
   color: white;
-  padding: 1.5rem 2rem;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1100;
+  box-sizing: border-box;
 }
 
 .header-left {
@@ -368,25 +396,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.2rem;
 }
 
 .status-text {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .wifi-circle {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .wifi-circle.online {
@@ -399,9 +428,12 @@
 }
 
 @keyframes pulse-online {
-  0%, 100% {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
+
   50% {
     box-shadow: 0 2px 16px rgba(76, 175, 80, 0.6);
   }
@@ -415,7 +447,7 @@
 }
 
 .btn-logout-orange {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
   color: white;
   border: 2px solid white;
   padding: 0.6rem 1.5rem;
@@ -426,7 +458,7 @@
 }
 
 .btn-logout-orange:hover {
-  background: rgba(255,255,255,0.35);
+  background: rgba(255, 255, 255, 0.35);
   transform: translateY(-1px);
 }
 
@@ -466,7 +498,7 @@
   background: white;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 2rem;
   border-top: 4px solid #ff8c42;
 }
@@ -498,7 +530,7 @@
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .complaint-history-section h2 {
@@ -623,7 +655,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -638,7 +670,7 @@
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
@@ -658,7 +690,7 @@
 }
 
 .modal-close {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   border: 2px solid white;
   color: white;
   font-size: 1.5rem;
@@ -673,7 +705,7 @@
 }
 
 .modal-close:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
   transform: rotate(90deg);
 }
 
@@ -1098,7 +1130,7 @@
 
 .violation-photo-item:hover {
   transform: scale(1.05);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .violation-photo-item img {
@@ -1217,7 +1249,7 @@
 
 .quest-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .quest-card .complaint-header {
@@ -1240,6 +1272,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1306,7 +1339,7 @@
 
 .evidence-preview-item:hover {
   transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .evidence-preview-item img {
@@ -1393,7 +1426,7 @@
   margin-bottom: 0.75rem;
   border-radius: 8px;
   border-left: 4px solid #ff8c42;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .violation-detail h4 {
@@ -1428,13 +1461,13 @@
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
 }
 
 .evidence-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .evidence-item img {
@@ -1458,3 +1491,67 @@
   background-color: #fff8f0;
 }
 
+/* Sidebar Layout Adjustments */
+.dashboard-with-sidebar {
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+}
+
+.dashboard-with-sidebar .dashboard-content {
+  max-width: 100%;
+  padding: 1.5rem 2rem;
+}
+
+.dashboard-with-sidebar.sidebar-collapsed {
+  margin-left: 60px;
+}
+
+@media (max-width: 768px) {
+
+  .dashboard-with-sidebar,
+  .dashboard-with-sidebar.sidebar-collapsed {
+    margin-left: 0;
+  }
+}
+
+/* Keep sidebar fixed while scrolling header */
+/* Sidebar fixed rule removed */
+
+/* Franchise Offense Card Styling */
+.franchise-card.three-strikes {
+  background: #ffebee;
+  border-color: #d32f2f;
+}
+
+.franchise-card.has-offenses {
+  background: #fff8e1;
+}
+
+.franchise-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.offense-badge {
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+  font-size: 1rem;
+}
