@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { franchisesAPI, investigationsAPI, ticketsAPI } from '../../services/api';
 import { FaWifi } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
+import { VIOLATION_CATEGORIES, getAllViolationTypes, formatViolationType as sharedFormatViolationType } from '../../utils/violations';
 import PedicabIcon from '../../components/PedicabIcon';
 import Sidebar from '../../components/Sidebar';
 import { useToast } from '../../components/ErrorToast';
@@ -31,56 +32,8 @@ const EnforcerDashboard = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
 
 
-  // Violation categories - separated by Driver and Vehicle
-  const violationCategories = {
-    'Driver Violations': [
-      'no_valid_license',
-      'expired_drivers_license',
-      'failure_to_bring_license',
-      'no_mayors_permit_driver',
-      'student_driver_not_accompanied',
-      'reckless_driving',
-      'disregarding_traffic_sign',
-      'overcharging',
-      'refusal_to_convey',
-      'discourtesy_arrogance',
-      'rude_behavior',
-      'unauthorized_route',
-      'no_fare_matrix',
-      'operating_under_influence',
-      'no_uniform_id',
-      'driving_in_slippers_sleeveless'
-    ],
-    'Vehicle Violations': [
-      'no_plate_number',
-      'plate_improperly_displayed',
-      'obstructed_plate',
-      'no_plate_sticker',
-      'no_registration_official_receipt',
-      'expired_franchise',
-      'expired_registration',
-      'invalid_registration',
-      'incomplete_or_cr',
-      'illegal_parking',
-      'parking_on_sidewalk',
-      'parking_infront_driveway',
-      'obstruction',
-      'missing_headlights',
-      'missing_taillights',
-      'no_side_mirrors',
-      'poor_vehicle_condition',
-      'overloading',
-      'excessive_noise',
-      'no_seatbelt',
-      'defective_brakes'
-    ],
-    'Others': [
-      'other_violation'
-    ]
-  };
-
   // Flatten and create initial state
-  const allViolationTypes = Object.values(violationCategories).flat();
+  const allViolationTypes = getAllViolationTypes();
   const initialViolations = {};
   allViolationTypes.forEach(type => {
     initialViolations[type] = { checked: false, notes: '', photos: [] };
@@ -365,7 +318,7 @@ const EnforcerDashboard = () => {
       const checkedViolations = Object.entries(ticketForm.violations)
         .filter(([_, data]) => data.checked)
         .map(([type, data]) => ({
-          type: formatViolationType(type),
+          type: type, // Use the string directly as it now matches backend exactly
           notes: data.notes,
           photos: data.photos.map(photo => ({
             url: photo.preview,
@@ -399,18 +352,7 @@ const EnforcerDashboard = () => {
       showSuccess('Ticket submitted successfully!');
       setSelectedInvestigation(null);
       setTicketForm({
-        violations: {
-          'missing_headlights': { checked: false, notes: '', photos: [] },
-          'illegal_parking': { checked: false, notes: '', photos: [] },
-          'expired_registration': { checked: false, notes: '', photos: [] },
-          'overloading': { checked: false, notes: '', photos: [] },
-          'no_side_mirrors': { checked: false, notes: '', photos: [] },
-          'missing_taillights': { checked: false, notes: '', photos: [] },
-          'no_license_plate': { checked: false, notes: '', photos: [] },
-          'reckless_driving': { checked: false, notes: '', photos: [] },
-          'poor_vehicle_condition': { checked: false, notes: '', photos: [] },
-          'excessive_noise': { checked: false, notes: '', photos: [] }
-        },
+        violations: initialViolations,
         additionalNotes: ''
       });
       loadData();
@@ -440,9 +382,7 @@ const EnforcerDashboard = () => {
   };
 
   const formatViolationType = (type) => {
-    return type.replace(/_/g, ' ').split(' ').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    return sharedFormatViolationType(type);
   };
 
   return (
@@ -596,7 +536,7 @@ const EnforcerDashboard = () => {
                             <div>
                               <h5>Violations Checklist:</h5>
                               <div className="violations-list">
-                                {Object.entries(violationCategories).map(([category, violations]) => (
+                                {Object.entries(VIOLATION_CATEGORIES).map(([category, violations]) => (
                                   <div key={category} className="violation-category">
                                     <h6 className="violation-category-title">{category}</h6>
                                     {violations.map(violationType => (

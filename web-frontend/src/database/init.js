@@ -38,9 +38,33 @@ export const initDatabase = async () => {
         licenseNumber TEXT,
         status TEXT,
         photos TEXT,
+        offenseCount INTEGER DEFAULT 0,
+        hasThreeStrikes BOOLEAN DEFAULT 0,
+        offenses TEXT,
         lastSynced DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Migration logic for existing databases
+    try {
+      const columns = db.exec("PRAGMA table_info(franchises)");
+      const columnNames = columns[0].values.map(v => v[1]);
+
+      if (!columnNames.includes('offenseCount')) {
+        db.run("ALTER TABLE franchises ADD COLUMN offenseCount INTEGER DEFAULT 0");
+        console.log('Added offenseCount column to franchises table');
+      }
+      if (!columnNames.includes('hasThreeStrikes')) {
+        db.run("ALTER TABLE franchises ADD COLUMN hasThreeStrikes BOOLEAN DEFAULT 0");
+        console.log('Added hasThreeStrikes column to franchises table');
+      }
+      if (!columnNames.includes('offenses')) {
+        db.run("ALTER TABLE franchises ADD COLUMN offenses TEXT");
+        console.log('Added offenses column to franchises table');
+      }
+    } catch (e) {
+      console.error('Error during database migration:', e);
+    }
 
     console.log('Franchise database initialized');
     return db;

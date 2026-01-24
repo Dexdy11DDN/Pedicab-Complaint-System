@@ -1,5 +1,7 @@
 # Pedicab Complaint System
 
+**Repository:** [https://github.com/Dexdy11DDN/Pedicab-Complaint-System](https://github.com/Dexdy11DDN/Pedicab-Complaint-System)
+
 A comprehensive complaint management system for pedicab services with web and mobile (Android) applications. The system features three user roles: Clients (submit complaints), Enforcers (investigate complaints and check franchise databases), and Admins (approve investigations and oversee the system).
 
 ## 🔐 Default Credentials
@@ -46,11 +48,22 @@ The system comes with three pre-seeded accounts for testing:
     - Full untruncated description
     - All timestamps
     - Current status with color coding
+    - **Actions:**
+      - **Cancel Complaint:** Option to cancel if status is 'submitted'.
+      - **Edit Complaint:** Option to modify details if status is 'submitted'.
+      - **Delete Complaint:** Option to permanently remove if status is 'submitted'.
+    - **Complaint Categories:**
+      - Includes new **"Sexual Harassment"** category for sensitive reporting.
   - **Status tracking:** Visual badges for submitted, under_review, investigating, resolved, rejected
 - **Real-time Sync:** 
   - Automatic synchronization when online
+  - Automatic synchronization when online
   - Sync status updates (syncing.../synced/unable to sync)
   - Network state detection
+- **Profile Management:**
+  - View personal details (Name, Email, Role)
+  - View total submitted complaints count
+  - Secure Sign Out
 
 ### 🔍 Enforcer
 **Primary Function:** Accept investigation quests and submit detailed violation tickets
@@ -201,6 +214,11 @@ The system comes with three pre-seeded accounts for testing:
 
 **Manage Complaints Tab:**
 - **View all complaints** submitted by clients
+- **Sorting & Filtering:**
+    - **Sort by:** Type, Status, Date (Clickable headers)
+    - **Filter by:**
+        - **Category:** Dropdown including "Sexual Harassment"
+        - **Status:** Dropdown (Submitted, Under Review, etc.)
 - **Table/List view** with complete complaint details
 - **Two-step approval workflow:**
   1. **Review Stage:**
@@ -231,6 +249,10 @@ The system comes with three pre-seeded accounts for testing:
     - Franchise number input
     - Investigation description
     - Specific instructions for enforcer
+    - Specific instructions for enforcer
+- **Sorting & Filtering:**
+    - **Sort by:** Status
+    - **Filter by:** Status (Open, Accepted, Completed)
 - **View all investigations** in list format
 - **Investigation cards show:**
   - Investigation number (INV-YYYY-NNNN)
@@ -253,6 +275,9 @@ The system comes with three pre-seeded accounts for testing:
 
 **Manage Tickets Tab:**
 - **View all submitted tickets** from enforcers
+- **Sorting & Filtering:**
+    - **Sort by:** Status, Date
+    - **Filter by:** Status (Submitted, Under Review, Resolved, Rejected)
 - **Table view** with columns:
   - Ticket ID (TKT-YYYY-NNNN)
   - Franchise Number
@@ -324,8 +349,22 @@ The system comes with three pre-seeded accounts for testing:
   - Total enforcers count
   - Active enforcers count
   - Inactive enforcers count
+  - Inactive enforcers count
 - **Refresh button** for manual data reload
 - **Back to Dashboard** navigation
+
+**Advanced Database Features:**
+- **Three Strikes Rule:**
+  - Automated tracking of franchise offenses
+  - Franchises with 3+ validated violations are flagged
+  - Visual indicators for "Three Strikes" status
+- **Offense Management:**
+  - **Reset Offenses:** Admin can reset offense count for a franchise (e.g., after suspension served)
+  - **View History:** Detailed history of all past tickets and resolutions
+- **Offline Franchise Database:**
+  - Full copy of franchise data stored locally (SQLite)
+  - Allows franchise lookup even without internet connection
+  - Auto-syncs when connection is restored
 
 ## 🔐 Registration & Account Security
 

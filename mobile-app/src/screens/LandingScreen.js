@@ -16,18 +16,18 @@ const LandingScreen = ({ navigation }) => {
       <View style={styles.bubble1} />
       <View style={styles.bubble2} />
       <View style={styles.bubble3} />
-      
+
       {/* Main Content */}
       <View style={styles.content}>
         {/* Logo/Icon */}
         <View style={styles.iconContainer}>
           <Text style={styles.iconEmoji}>🚲</Text>
         </View>
-        
+
         {/* Title */}
         <Text style={styles.title}>Pedicab Complaint System</Text>
         <Text style={styles.subtitle}>Manage complaints, investigations, and enforcement</Text>
-        
+
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -37,7 +37,7 @@ const LandingScreen = ({ navigation }) => {
           >
             <Text style={styles.loginButtonText}>Sign In</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.registerButton}
             onPress={() => navigation.navigate('Register')}
@@ -46,7 +46,7 @@ const LandingScreen = ({ navigation }) => {
             <Text style={styles.registerButtonText}>Create Account</Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Footer */}
         <Text style={styles.footer}>Powered by Local Government</Text>
       </View>

@@ -53,9 +53,17 @@ const franchiseSchema = new mongoose.Schema({
     },
     ticketNumber: String,
     violations: [String],
-    confirmedAt: {
+    status: {
+      type: String,
+      enum: ['pending', 'confirmed'],
+      default: 'pending'
+    },
+    createdAt: {
       type: Date,
       default: Date.now
+    },
+    confirmedAt: {
+      type: Date
     },
     confirmedBy: {
       type: mongoose.Schema.Types.ObjectId,

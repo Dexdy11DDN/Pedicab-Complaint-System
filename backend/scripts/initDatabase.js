@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Franchise = require('../models/Franchise');
+const Ticket = require('../models/Ticket');
+const Investigation = require('../models/Investigation');
+const Complaint = require('../models/Complaint');
 
 const connectDB = async () => {
   try {
@@ -21,6 +24,9 @@ const initDatabase = async () => {
     // Clear existing data
     await User.deleteMany({});
     await Franchise.deleteMany({});
+    await Ticket.deleteMany({});
+    await Investigation.deleteMany({});
+    await Complaint.deleteMany({});
 
     console.log('Creating default users...');
 
@@ -68,8 +74,8 @@ const initDatabase = async () => {
 
     // Create sample franchises (1001-1100)
     const franchises = [];
-    const ownerNames = ['Juan Dela Cruz', 'Maria Santos', 'Pedro Garcia', 'Ana Reyes', 'Jose Mendoza', 
-                        'Carmen Lopez', 'Roberto Aquino', 'Elena Torres', 'Miguel Ramos', 'Sofia Fernandez'];
+    const ownerNames = ['Juan Dela Cruz', 'Maria Santos', 'Pedro Garcia', 'Ana Reyes', 'Jose Mendoza',
+      'Carmen Lopez', 'Roberto Aquino', 'Elena Torres', 'Miguel Ramos', 'Sofia Fernandez'];
     const cities = ['Manila', 'Quezon City', 'Makati', 'Pasay', 'Taguig', 'Paranaque', 'Mandaluyong', 'Pasig'];
     const streets = ['Rizal Ave', 'Quezon Blvd', 'EDSA', 'Taft Ave', 'España', 'Roxas Blvd', 'Makati Ave', 'Ortigas'];
     const statuses = ['active', 'active', 'active', 'active', 'active', 'active', 'suspended', 'active', 'active', 'revoked'];
@@ -79,7 +85,7 @@ const initDatabase = async () => {
       const cityIndex = (i - 1001) % cities.length;
       const streetIndex = (i - 1001) % streets.length;
       const statusIndex = (i - 1001) % statuses.length;
-      
+
       franchises.push({
         franchiseNumber: i.toString(),
         ownerName: ownerNames[ownerIndex],

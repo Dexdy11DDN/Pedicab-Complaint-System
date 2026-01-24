@@ -8,12 +8,15 @@ import {
     Animated,
     TouchableWithoutFeedback,
     ScrollView,
-    Image
+    Image,
+    Alert
 } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 const Sidebar = ({ visible, onClose, onNavigate, activeItem, userRole, userName }) => {
+    const { logout } = useAuth();
     const slideAnim = useRef(new Animated.Value(-300)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -60,6 +63,24 @@ const Sidebar = ({ visible, onClose, onNavigate, activeItem, userRole, userName 
         { key: 'profile', label: 'My Profile', icon: '👤' },
     ];
 
+    const handleSignOut = () => {
+        Alert.alert(
+            "Sign Out",
+            "Are you sure you want to sign out?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: async () => {
+                        onClose();
+                        await logout();
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={[styles.container, !visible && styles.hidden]} pointerEvents={visible ? 'auto' : 'none'}>
             <TouchableWithoutFeedback onPress={onClose}>
@@ -97,6 +118,14 @@ const Sidebar = ({ visible, onClose, onNavigate, activeItem, userRole, userName 
                             </Text>
                         </TouchableOpacity>
                     ))}
+
+                    <TouchableOpacity
+                        style={[styles.menuItem, styles.signOutItem]}
+                        onPress={handleSignOut}
+                    >
+                        <Text style={[styles.menuIcon, styles.signOutLabel]}>🚪</Text>
+                        <Text style={[styles.menuLabel, styles.signOutLabel]}>Sign Out</Text>
+                    </TouchableOpacity>
                 </ScrollView>
 
                 <View style={styles.footer}>
@@ -204,6 +233,14 @@ const styles = StyleSheet.create({
     footerText: {
         fontSize: 12,
         color: '#999',
+    },
+    signOutItem: {
+        marginTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    signOutLabel: {
+        color: '#d32f2f',
     },
 });
 

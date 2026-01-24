@@ -116,6 +116,27 @@ router.post('/', authMiddleware, roleMiddleware('enforcer'), async (req, res) =>
       });
     }
 
+    // Record pending offense on the franchise
+    const Franchise = require('../models/Franchise');
+    const franchise = await Franchise.findOne({ franchiseNumber: investigation.franchiseNumber });
+
+    if (franchise) {
+      const violationTypes = ticket.violations.map(v => v.type);
+      franchise.offenses.push({
+        ticketId: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        violations: violationTypes,
+        status: 'pending'
+      });
+
+      // Note: We don't increment offenseCount or hasThreeStrikes for pending offenses
+      // Unless you want them to count towards the limit immediately.
+      // For now, let's keep the existing logic of updating count when forwarded.
+
+      await franchise.save();
+      console.log(`Recorded PENDING offense for franchise ${investigation.franchiseNumber}`);
+    }
+
     const populatedTicket = await Ticket.findById(ticket._id)
       .populate('investigation')
       .populate('complaint')
@@ -150,27 +171,50 @@ router.patch('/:id/forward', authMiddleware, roleMiddleware('admin'), async (req
 
     await ticket.save();
 
-    // Record offense on the franchise (confirmed violation)
+    // Record/Update offense on the franchise (confirmed violation)
     const Franchise = require('../models/Franchise');
     const franchise = await Franchise.findOne({ franchiseNumber: ticket.franchiseNumber });
 
     if (franchise) {
-      // Add offense record
-      const violationTypes = ticket.violations.map(v => v.type);
-      franchise.offenses.push({
-        ticketId: ticket._id,
-        ticketNumber: ticket.ticketNumber,
-        violations: violationTypes,
-        confirmedAt: Date.now(),
-        confirmedBy: req.user.userId
+      // Look for existing pending offense
+      const offenseIndex = franchise.offenses.findIndex(o =>
+        o.ticketId && o.ticketId.toString() === ticket._id.toString()
+      );
+
+      if (offenseIndex !== -1) {
+        // Update existing pending offense
+        franchise.offenses[offenseIndex].status = 'confirmed';
+        franchise.offenses[offenseIndex].confirmedAt = Date.now();
+        franchise.offenses[offenseIndex].confirmedBy = req.user.userId;
+      } else {
+        // Fallback: Add new confirmed offense if pending one wasn't found (e.g. for old tickets)
+        const violationTypes = ticket.violations.map(v => v.type);
+        franchise.offenses.push({
+          ticketId: ticket._id,
+          ticketNumber: ticket.ticketNumber,
+          violations: violationTypes,
+          status: 'confirmed',
+          confirmedAt: Date.now(),
+          confirmedBy: req.user.userId
+        });
+      }
+
+      // Update offense count and 3-strike flag (count only confirmed offenses)
+      const confirmedOffenses = franchise.offenses.filter(o => o.status === 'confirmed' || (o.status === 'pending' && o.confirmedAt));
+      franchise.offenseCount = confirmedOffenses.length;
+
+      // New logic: 3 strikes are for REPETITIVE violations of the SAME type
+      const violationCounts = {};
+      confirmedOffenses.forEach(offense => {
+        offense.violations.forEach(vType => {
+          violationCounts[vType] = (violationCounts[vType] || 0) + 1;
+        });
       });
 
-      // Update offense count and 3-strike flag
-      franchise.offenseCount = franchise.offenses.length;
-      franchise.hasThreeStrikes = franchise.offenseCount >= 3;
+      franchise.hasThreeStrikes = Object.values(violationCounts).some(count => count >= 3);
 
       await franchise.save();
-      console.log(`Recorded offense for franchise ${ticket.franchiseNumber}. Total offenses: ${franchise.offenseCount}`);
+      console.log(`Confirmed offense for franchise ${ticket.franchiseNumber}. Total confirmed: ${franchise.offenseCount}, Repetitive trigger: ${franchise.hasThreeStrikes}`);
     }
 
     const updatedTicket = await Ticket.findById(ticket._id)

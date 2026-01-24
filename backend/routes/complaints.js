@@ -18,7 +18,7 @@ const generateComplaintNumber = async () => {
 router.post('/', [authMiddleware, roleMiddleware('client')], [
   body('franchiseNumber').notEmpty(),
   body('description').notEmpty(),
-  body('category').isIn(['overcharging', 'rude_behavior', 'reckless_driving', 'refusal_of_service', 'vehicle_condition', 'other']),
+  body('category').isIn(['overcharging', 'rude_behavior', 'reckless_driving', 'refusal_of_service', 'vehicle_condition', 'other', 'sexual_harassment']),
   body('location').notEmpty(),
   body('incidentDate').isISO8601()
 ], async (req, res) => {
@@ -43,6 +43,77 @@ router.post('/', [authMiddleware, roleMiddleware('client')], [
     emitToRoles(req, ['enforcer', 'admin'], 'complaint:created', complaint);
 
     res.status(201).json(complaint);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update complaint (Client only, only if submitted)
+router.put('/:id', [authMiddleware, roleMiddleware('client')], [
+  body('franchiseNumber').notEmpty(),
+  body('description').notEmpty(),
+  body('category').isIn(['overcharging', 'rude_behavior', 'reckless_driving', 'refusal_of_service', 'vehicle_condition', 'other', 'sexual_harassment']),
+  body('location').notEmpty(),
+  body('incidentDate').isISO8601()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (complaint.client.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (complaint.status !== 'submitted') {
+      return res.status(400).json({ message: 'Cannot edit a complaint that is already under review or processed' });
+    }
+
+    const updatedComplaint = await Complaint.findByIdAndUpdate(
+      req.params.id,
+      {
+        franchiseNumber: req.body.franchiseNumber,
+        category: req.body.category,
+        description: req.body.description,
+        location: req.body.location,
+        incidentDate: req.body.incidentDate
+      },
+      { new: true }
+    ).populate('client', 'firstName lastName email');
+
+    res.json(updatedComplaint);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete complaint (Client only, only if submitted)
+router.delete('/:id', [authMiddleware, roleMiddleware('client')], async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (complaint.client.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (complaint.status !== 'submitted') {
+      return res.status(400).json({ message: 'Cannot delete a complaint that is already under review or processed' });
+    }
+
+    await Complaint.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Complaint deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

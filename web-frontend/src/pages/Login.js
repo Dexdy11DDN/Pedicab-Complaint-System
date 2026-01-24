@@ -15,9 +15,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     const result = await login(formData.email, formData.password);
-    
+
     if (result.success) {
       navigate('/dashboard');
     } else {
@@ -37,9 +37,9 @@ const Login = () => {
           <h2>Welcome Back</h2>
           <p className="auth-subtitle">Pedicab Complaint System</p>
         </div>
-        
+
         {error && <div className="error-message">{error}</div>}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email Address</label>
@@ -55,7 +55,7 @@ const Login = () => {
               />
             </div>
           </div>
-          
+
           <div className="form-group">
             <label>Password</label>
             <div className="input-with-icon">
@@ -77,10 +77,10 @@ const Login = () => {
               </button>
             </div>
           </div>
-          
+
           <button type="submit" className="btn-primary-orange">Sign In</button>
         </form>
-        
+
         <p className="auth-link">
           Don't have an account? <Link to="/register">Register here</Link>
         </p>

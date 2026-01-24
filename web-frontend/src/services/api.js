@@ -52,6 +52,8 @@ export const complaintsAPI = {
   getMyComplaints: () => api.get('/complaints/my-complaints'),
   getById: (id) => api.get(`/complaints/${id}`),
   create: (data) => api.post('/complaints', data),
+  update: (id, data) => api.put(`/complaints/${id}`, data),
+  delete: (id) => api.delete(`/complaints/${id}`),
   updateStatus: (id, status) => api.patch(`/complaints/${id}/status`, { status })
 };
 

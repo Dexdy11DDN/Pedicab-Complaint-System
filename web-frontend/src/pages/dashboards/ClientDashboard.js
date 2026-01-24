@@ -14,6 +14,7 @@ const ClientDashboard = () => {
   const [activeSection, setActiveSection] = useState('myComplaints');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [complaints, setComplaints] = useState([]);
+  const [editingComplaintId, setEditingComplaintId] = useState(null);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState('synced');
@@ -71,8 +72,15 @@ const ClientDashboard = () => {
     }
 
     try {
-      await complaintsAPI.create(formData);
-      showSuccess('Complaint submitted successfully!');
+      if (editingComplaintId) {
+        await complaintsAPI.update(editingComplaintId, formData);
+        showSuccess('Complaint updated successfully!');
+        setEditingComplaintId(null);
+      } else {
+        await complaintsAPI.create(formData);
+        showSuccess('Complaint submitted successfully!');
+      }
+
       setFormData({
         franchiseNumber: '',
         description: '',
@@ -81,6 +89,34 @@ const ClientDashboard = () => {
         incidentDate: ''
       });
       setActiveSection('myComplaints');
+      loadComplaints();
+    } catch (error) {
+      showError(handleApiError(error));
+    }
+  };
+
+  const handleEditComplaint = (complaint) => {
+    setFormData({
+      franchiseNumber: complaint.franchiseNumber,
+      description: complaint.description,
+      category: complaint.category,
+      location: complaint.location,
+      incidentDate: complaint.incidentDate ? new Date(complaint.incidentDate).toISOString().split('T')[0] : ''
+    });
+    setEditingComplaintId(complaint._id);
+    setSelectedComplaint(null);
+    setActiveSection('newComplaint');
+  };
+
+  const handleDeleteComplaint = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this complaint? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await complaintsAPI.delete(id);
+      showSuccess('Complaint deleted successfully');
+      setSelectedComplaint(null);
       loadComplaints();
     } catch (error) {
       showError(handleApiError(error));
@@ -112,7 +148,22 @@ const ClientDashboard = () => {
       {/* Sidebar Navigation */}
       <Sidebar
         activeSection={activeSection}
-        onSectionChange={setActiveSection}
+        onSectionChange={(section) => {
+          setActiveSection(section);
+          if (section === 'newComplaint' && !editingComplaintId) {
+            // Clear form if switching to new complaint tab manually (not via Edit)
+            setFormData({
+              franchiseNumber: '',
+              description: '',
+              category: 'overcharging',
+              location: '',
+              incidentDate: ''
+            });
+          }
+          if (section !== 'newComplaint') {
+            setEditingComplaintId(null); // Cancel edit if navigating away
+          }
+        }}
         userRole="client"
         isCollapsed={sidebarCollapsed}
         toggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -150,7 +201,7 @@ const ClientDashboard = () => {
         {/* New Complaint Section */}
         {activeSection === 'newComplaint' && (
           <div className="complaint-form-card">
-            <h3>Submit New Complaint</h3>
+            <h3>{editingComplaintId ? 'Edit Complaint' : 'Submit New Complaint'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
@@ -173,6 +224,7 @@ const ClientDashboard = () => {
                     <option value="reckless_driving">Reckless Driving</option>
                     <option value="refusal_of_service">Refusal of Service</option>
                     <option value="vehicle_condition">Vehicle Condition</option>
+                    <option value="sexual_harassment">Sexual Harassment</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -214,7 +266,30 @@ const ClientDashboard = () => {
                 ></textarea>
               </div>
 
-              <button type="submit" className="btn-submit-orange">Submit Complaint</button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button type="submit" className="btn-submit-orange">
+                  {editingComplaintId ? 'Update Complaint' : 'Submit Complaint'}
+                </button>
+                {editingComplaintId && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setEditingComplaintId(null);
+                      setFormData({
+                        franchiseNumber: '',
+                        description: '',
+                        category: 'overcharging',
+                        location: '',
+                        incidentDate: ''
+                      });
+                      setActiveSection('myComplaints');
+                    }}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         )}
@@ -350,6 +425,24 @@ const ClientDashboard = () => {
                     {selectedComplaint.description}
                   </p>
                 </div>
+
+                {selectedComplaint.status === 'submitted' && (
+                  <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => handleEditComplaint(selectedComplaint)}
+                    >
+                      Edit Complaint
+                    </button>
+                    <button
+                      className="btn-danger-small"
+                      onClick={() => handleDeleteComplaint(selectedComplaint._id)}
+                      style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}
+                    >
+                      Delete Complaint
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

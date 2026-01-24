@@ -39,6 +39,68 @@ const AdminDashboard = () => {
   const [selectedFranchise, setSelectedFranchise] = useState(null);
   const [showInvestigationForm, setShowInvestigationForm] = useState(false);
   const [investigationForm, setInvestigationForm] = useState({ franchiseNumber: '', description: '', instructions: '', complaintId: '' });
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all'); // specific for complaints
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortedAndFilteredData = (data, type) => {
+    let filtered = [...data];
+
+    // Apply Status Filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus);
+    }
+
+    // Apply Category Filter (only for complaints)
+    if (type === 'complaints' && filterCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === filterCategory);
+    }
+
+    // Apply Sorting
+    return filtered.sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+
+      // Handle nested properties (e.g., client.firstName)
+      if (sortField.includes('.')) {
+        const parts = sortField.split('.');
+        valA = parts.reduce((obj, key) => obj && obj[key], a);
+        valB = parts.reduce((obj, key) => obj && obj[key], b);
+      }
+
+      // Handle dates
+      if (sortField === 'createdAt' || sortField === 'incidentDate') {
+        valA = new Date(valA || 0).getTime();
+        valB = new Date(valB || 0).getTime();
+      }
+
+      // Handle strings (case-insensitive)
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Reset filters when tab changes
+  useEffect(() => {
+    setFilterStatus('all');
+    setFilterCategory('all');
+    setSortField('createdAt');
+    setSortOrder('desc');
+  }, [activeTab]);
 
   useEffect(() => {
     const setupDatabase = async () => {
@@ -310,6 +372,17 @@ const AdminDashboard = () => {
     return text.substring(0, maxLength) + '...';
   };
 
+  const getViolationSummary = (franchise) => {
+    const summary = {};
+    const confirmedOffenses = (franchise.offenses || []).filter(o => o.status === 'confirmed' || (o.status === 'pending' && o.confirmedAt));
+    confirmedOffenses.forEach(offense => {
+      offense.violations?.forEach(vType => {
+        summary[vType] = (summary[vType] || 0) + 1;
+      });
+    });
+    return Object.entries(summary).sort((a, b) => b[1] - a[1]);
+  };
+
   const handleForwardTicket = async (ticketId) => {
     try {
       await ticketsAPI.forward(ticketId);
@@ -505,23 +578,72 @@ const AdminDashboard = () => {
 
         {activeTab === 'complaints' && (
           <div>
-            <h2>Manage Complaints</h2>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2>Manage Complaints</h2>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="overcharging">Overcharging</option>
+                  <option value="rude_behavior">Rude Behavior</option>
+                  <option value="reckless_driving">Reckless Driving</option>
+                  <option value="refusal_of_service">Refusal of Service</option>
+                  <option value="vehicle_condition">Vehicle Condition</option>
+                  <option value="sexual_harassment">Sexual Harassment</option>
+                  <option value="other">Other</option>
+                </select>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="investigating">Investigating</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+
             {complaints.length === 0 ? (
               <div className="no-complaints">
-                <p>No complaints submitted yet.</p>
+                <p>No complaints found.</p>
               </div>
             ) : (
               <div className="complaint-table">
                 <div className="table-header">
                   <div className="col-complaint-id">ID</div>
                   <div className="col-franchise">Franchise</div>
-                  <div className="col-type">Type</div>
+                  <div
+                    className="col-type sortable-header"
+                    onClick={() => handleSort('category')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Type {sortField === 'category' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </div>
                   <div className="col-client">Client</div>
-                  <div className="col-status">Status</div>
-                  <div className="col-time">Submitted</div>
+                  <div
+                    className="col-status sortable-header"
+                    onClick={() => handleSort('status')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Status {sortField === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </div>
+                  <div
+                    className="col-time sortable-header"
+                    onClick={() => handleSort('createdAt')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Submitted {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </div>
                   <div className="col-comment">Description</div>
                 </div>
-                {complaints.map(complaint => (
+                {getSortedAndFilteredData(complaints, 'complaints').map(complaint => (
                   <div
                     key={complaint._id}
                     className="table-row"
@@ -552,7 +674,21 @@ const AdminDashboard = () => {
 
         {activeTab === 'tickets' && (
           <div>
-            <h2>Investigation Tickets</h2>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2>Investigation Tickets</h2>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="status-filter-select"
+              >
+                <option value="all">All Statuses</option>
+                <option value="submitted">Submitted</option>
+                <option value="under_review">Under Review</option>
+                <option value="resolved">Resolved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
             {tickets.length === 0 ? (
               <div className="no-complaints">
                 <p>No tickets submitted yet.</p>
@@ -564,10 +700,22 @@ const AdminDashboard = () => {
                   <div className="col-franchise">Franchise</div>
                   <div className="col-enforcer">Enforcer</div>
                   <div className="col-violations">Violations</div>
-                  <div className="col-status">Status</div>
-                  <div className="col-time">Submitted</div>
+                  <div
+                    className="col-status sortable-header"
+                    onClick={() => handleSort('status')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Status {sortField === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </div>
+                  <div
+                    className="col-time sortable-header"
+                    onClick={() => handleSort('createdAt')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Submitted {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </div>
                 </div>
-                {tickets.map(ticket => (
+                {getSortedAndFilteredData(tickets, 'tickets').map(ticket => (
                   <div
                     key={ticket._id}
                     className="table-row"
@@ -599,12 +747,24 @@ const AdminDashboard = () => {
           <div>
             <div className="section-header">
               <h2>Manage Investigations</h2>
-              <button
-                onClick={() => setShowInvestigationForm(!showInvestigationForm)}
-                className="btn-new-complaint"
-              >
-                {showInvestigationForm ? 'Cancel' : 'Create Investigation'}
-              </button>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="open">Open</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <button
+                  onClick={() => setShowInvestigationForm(!showInvestigationForm)}
+                  className="btn-new-complaint"
+                >
+                  {showInvestigationForm ? 'Cancel' : 'Create Investigation'}
+                </button>
+              </div>
             </div>
 
             {showInvestigationForm && (
@@ -666,10 +826,15 @@ const AdminDashboard = () => {
                     <div>Franchise</div>
                     <div>Description</div>
                     <div>Accepted By</div>
-                    <div>Status</div>
+                    <div
+                      onClick={() => handleSort('status')}
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      Status {sortField === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </div>
                     <div>Actions</div>
                   </div>
-                  {investigations.map(inv => (
+                  {getSortedAndFilteredData(investigations, 'investigations').map(inv => (
                     <div
                       key={inv._id}
                       className="table-row"
@@ -871,8 +1036,39 @@ const AdminDashboard = () => {
                   marginBottom: '1rem'
                 }}>
                   <h3 style={{ margin: '0 0 0.5rem 0', color: selectedFranchise.hasThreeStrikes ? '#d32f2f' : '#ff9800' }}>
-                    {selectedFranchise.hasThreeStrikes ? '⚠️ 3 STRIKES - HIGH RISK' : `Offense History (${selectedFranchise.offenseCount || 0})`}
+                    {selectedFranchise.hasThreeStrikes ? '⚠️ 3 STRIKES - REPETITIVE VIOLATIONS' : `Offense History (${selectedFranchise.offenseCount || 0})`}
                   </h3>
+
+                  {getViolationSummary(selectedFranchise).length > 0 && (
+                    <details style={{ marginBottom: '1rem', cursor: 'pointer' }}>
+                      <summary style={{ fontWeight: 'bold', color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                        📊 Violation Breakdown (Click to View)
+                      </summary>
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.5)',
+                        padding: '0.75rem',
+                        borderRadius: '6px',
+                        display: 'grid',
+                        gap: '0.5rem'
+                      }}>
+                        {getViolationSummary(selectedFranchise).map(([type, count]) => (
+                          <div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                            <span style={{ color: '#444' }}>{formatViolationType(type)}</span>
+                            <span style={{
+                              background: count >= 3 ? '#d32f2f' : '#ff8c42',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              fontWeight: 'bold',
+                              fontSize: '0.75rem'
+                            }}>
+                              {count} {count >= 3 ? 'strikes' : 'counts'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
 
                   {(selectedFranchise.offenses && selectedFranchise.offenses.length > 0) ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

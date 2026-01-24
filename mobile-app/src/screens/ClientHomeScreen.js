@@ -18,6 +18,7 @@ const ClientHomeScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
+  const [editingComplaintId, setEditingComplaintId] = useState(null);
   const [formData, setFormData] = useState({
     franchiseNumber: '',
     description: '',
@@ -75,8 +76,15 @@ const ClientHomeScreen = ({ navigation }) => {
     }
 
     try {
-      await complaintsAPI.create(formData);
-      setMessage('Complaint submitted successfully!');
+      if (editingComplaintId) {
+        await complaintsAPI.update(editingComplaintId, formData);
+        setMessage('Complaint updated successfully!');
+        setEditingComplaintId(null);
+      } else {
+        await complaintsAPI.create(formData);
+        setMessage('Complaint submitted successfully!');
+      }
+
       setActiveSection('myComplaints');
       setFormData({
         franchiseNumber: '',
@@ -88,9 +96,48 @@ const ClientHomeScreen = ({ navigation }) => {
       loadComplaints();
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      setMessage('Error submitting complaint');
+      setMessage('Error submitting/updating complaint');
       setTimeout(() => setMessage(''), 3000);
     }
+  };
+
+  const handleEditComplaint = (complaint) => {
+    setFormData({
+      franchiseNumber: complaint.franchiseNumber,
+      description: complaint.description,
+      category: complaint.category,
+      location: complaint.location,
+      incidentDate: complaint.incidentDate ? new Date(complaint.incidentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    });
+    setEditingComplaintId(complaint._id);
+    setSelectedComplaint(null);
+    setActiveSection('newComplaint');
+  };
+
+  const handleDeleteComplaint = (id) => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this complaint?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await complaintsAPI.delete(id);
+              setMessage('Complaint deleted successfully');
+              setSelectedComplaint(null);
+              loadComplaints();
+              setTimeout(() => setMessage(''), 3000);
+            } catch (error) {
+              setMessage('Error deleting complaint');
+              setTimeout(() => setMessage(''), 3000);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const getStatusColor = (status) => {
@@ -181,7 +228,7 @@ const ClientHomeScreen = ({ navigation }) => {
         {/* New Complaint Form */}
         {activeSection === 'newComplaint' && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Submit New Complaint</Text>
+            <Text style={styles.formTitle}>{editingComplaintId ? 'Edit Complaint' : 'Submit New Complaint'}</Text>
 
             <View style={styles.formRow}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
@@ -210,6 +257,7 @@ const ClientHomeScreen = ({ navigation }) => {
                     <Picker.Item label="Reckless Driving" value="reckless_driving" />
                     <Picker.Item label="Refusal of Service" value="refusal_of_service" />
                     <Picker.Item label="Vehicle Condition" value="vehicle_condition" />
+                    <Picker.Item label="Sexual Harassment" value="sexual_harassment" />
                     <Picker.Item label="Other" value="other" />
                   </Picker>
                 </View>
@@ -254,8 +302,28 @@ const ClientHomeScreen = ({ navigation }) => {
             </View>
 
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.9}>
-              <Text style={styles.submitButtonText}>Submit Complaint</Text>
+              <Text style={styles.submitButtonText}>{editingComplaintId ? 'Update Complaint' : 'Submit Complaint'}</Text>
             </TouchableOpacity>
+
+            {editingComplaintId && (
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: '#757575', marginTop: 10 }]}
+                onPress={() => {
+                  setEditingComplaintId(null);
+                  setFormData({
+                    franchiseNumber: '',
+                    description: '',
+                    category: 'overcharging',
+                    location: '',
+                    incidentDate: new Date().toISOString().split('T')[0]
+                  });
+                  setActiveSection('myComplaints');
+                }}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.submitButtonText}>Cancel Edit</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -401,6 +469,23 @@ const ClientHomeScreen = ({ navigation }) => {
                   <Text style={styles.detailLabel}>Description:</Text>
                   <Text style={styles.descriptionBox}>{selectedComplaint.description}</Text>
                 </View>
+
+                {selectedComplaint.status === 'submitted' && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20, gap: 10 }}>
+                    <TouchableOpacity
+                      style={[styles.compactStatusBadge, { backgroundColor: '#757575', padding: 10 }]}
+                      onPress={() => handleEditComplaint(selectedComplaint)}
+                    >
+                      <Text style={[styles.compactStatusText, { fontSize: 14 }]}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.compactStatusBadge, { backgroundColor: '#d32f2f', padding: 10 }]}
+                      onPress={() => handleDeleteComplaint(selectedComplaint._id)}
+                    >
+                      <Text style={[styles.compactStatusText, { fontSize: 14 }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </ScrollView>
             )}
           </View>

@@ -24,7 +24,7 @@ const complaintSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['overcharging', 'rude_behavior', 'reckless_driving', 'refusal_of_service', 'vehicle_condition', 'other'],
+    enum: ['overcharging', 'rude_behavior', 'reckless_driving', 'refusal_of_service', 'vehicle_condition', 'other', 'sexual_harassment'],
     required: true
   },
   location: {
@@ -53,7 +53,7 @@ const complaintSchema = new mongoose.Schema({
   }
 });
 
-complaintSchema.pre('save', function(next) {
+complaintSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
