@@ -19,3 +19,8 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Fix for Windows long path issues
+allprojects {
+    buildDir = "C:/tmp/build/${rootProject.name}/${project.name}"
+}

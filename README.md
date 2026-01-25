@@ -2,6 +2,8 @@
 
 **Repository:** [https://github.com/Dexdy11DDN/Pedicab-Complaint-System](https://github.com/Dexdy11DDN/Pedicab-Complaint-System)
 
+# Don't mind the badapple file. Just don't.
+
 A comprehensive complaint management system for pedicab services with web and mobile (Android) applications. The system features three user roles: Clients (submit complaints), Enforcers (investigate complaints and check franchise databases), and Admins (approve investigations and oversee the system).
 
 ## 🔐 Default Credentials
