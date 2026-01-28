@@ -11,6 +11,7 @@ import { initDatabase } from '../../database/init';
 import { searchFranchises as searchLocalFranchises, getFranchiseCount } from '../../database/franchises';
 import { syncWithAPI, startAutoSync, stopAutoSync, loadInitialData } from '../../database/sync';
 import { groupViolationsByCategory, formatViolationType } from '../../utils/violations';
+import { BARANGAYS } from '../../utils/locations';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all'); // specific for complaints
+  const [filterLocation, setFilterLocation] = useState('all');
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -64,6 +66,16 @@ const AdminDashboard = () => {
     // Apply Category Filter (only for complaints)
     if (type === 'complaints' && filterCategory !== 'all') {
       filtered = filtered.filter(item => item.category === filterCategory);
+    }
+
+    // Apply Location Filter
+    if (filterLocation !== 'all') {
+      filtered = filtered.filter(item => {
+        const location = type === 'complaints' ? item.location :
+          (type === 'investigations' ? (item.complaint?.location || item.location) :
+            (type === 'tickets' ? (item.investigation?.complaint?.location || item.complaint?.location) : null));
+        return location === filterLocation;
+      });
     }
 
     // Apply Sorting
@@ -98,6 +110,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     setFilterStatus('all');
     setFilterCategory('all');
+    setFilterLocation('all');
     setSortField('createdAt');
     setSortOrder('desc');
   }, [activeTab]);
@@ -580,7 +593,17 @@ const AdminDashboard = () => {
           <div>
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2>Manage Complaints</h2>
-              <div style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Locations</option>
+                  {BARANGAYS.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
@@ -676,17 +699,29 @@ const AdminDashboard = () => {
           <div>
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2>Investigation Tickets</h2>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="status-filter-select"
-              >
-                <option value="all">All Statuses</option>
-                <option value="submitted">Submitted</option>
-                <option value="under_review">Under Review</option>
-                <option value="resolved">Resolved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Locations</option>
+                  {BARANGAYS.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
             </div>
 
             {tickets.length === 0 ? (
@@ -747,7 +782,17 @@ const AdminDashboard = () => {
           <div>
             <div className="section-header">
               <h2>Manage Investigations</h2>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="status-filter-select"
+                >
+                  <option value="all">All Locations</option>
+                  {BARANGAYS.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}

@@ -10,6 +10,7 @@ import { useToast } from '../../components/ErrorToast';
 import { initDatabase } from '../../database/init';
 import { searchFranchises as searchLocalFranchises, getFranchiseCount } from '../../database/franchises';
 import { syncWithAPI, startAutoSync, stopAutoSync, exportToCSV, loadInitialData } from '../../database/sync';
+import { BARANGAYS } from '../../utils/locations';
 import './Dashboard.css';
 
 const EnforcerDashboard = () => {
@@ -30,6 +31,7 @@ const EnforcerDashboard = () => {
   const [selectedInvestigation, setSelectedInvestigation] = useState(null);
   const [expandedInvestigation, setExpandedInvestigation] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [filterLocation, setFilterLocation] = useState('all');
 
 
   // Flatten and create initial state
@@ -115,7 +117,7 @@ const EnforcerDashboard = () => {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, filterLocation]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -141,13 +143,21 @@ const EnforcerDashboard = () => {
       setSyncStatus('syncing...');
       if (activeTab === 'available') {
         const response = await investigationsAPI.getAll({ status: 'open' });
-        const openOnly = (response.data.investigations || [])
+        let openOnly = (response.data.investigations || [])
           .filter(inv => inv.status === 'open')
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (filterLocation !== 'all') {
+          openOnly = openOnly.filter(inv => (inv.complaint?.location || inv.location) === filterLocation);
+        }
         setAvailableInvestigations(openOnly);
       } else if (activeTab === 'myInvestigations' || activeTab === 'completedInvestigations') {
         const response = await investigationsAPI.getAll({ acceptedByMe: true });
-        const allMyInvestigations = response.data.investigations || [];
+        let allMyInvestigations = response.data.investigations || [];
+
+        if (filterLocation !== 'all') {
+          allMyInvestigations = allMyInvestigations.filter(inv => (inv.complaint?.location || inv.location) === filterLocation);
+        }
 
         // Split into active and completed
         const active = allMyInvestigations
@@ -161,8 +171,13 @@ const EnforcerDashboard = () => {
         setMyInvestigations(activeTab === 'myInvestigations' ? active : completed);
       } else if (activeTab === 'myTickets') {
         const response = await ticketsAPI.getAll();
-        const tickets = (response.data.tickets || response.data)
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        let tickets = (response.data.tickets || response.data);
+
+        if (filterLocation !== 'all') {
+          tickets = tickets.filter(ticket => (ticket.investigation?.complaint?.location || ticket.complaint?.location) === filterLocation);
+        }
+
+        tickets = tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setMyTickets(tickets);
       } else if (activeTab === 'franchises') {
         if (dbInitialized) {
@@ -426,7 +441,19 @@ const EnforcerDashboard = () => {
 
         {activeTab === 'available' && (
           <div>
-            <h2>Available Investigation Quests</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>Available Investigation Quests</h2>
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="status-filter-select"
+              >
+                <option value="all">All Locations</option>
+                {BARANGAYS.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
             <div className="complaints-list">
               {availableInvestigations.map(investigation => {
                 const isExpanded = expandedInvestigation === investigation._id;
@@ -490,7 +517,19 @@ const EnforcerDashboard = () => {
 
         {(activeTab === 'myInvestigations' || activeTab === 'completedInvestigations') && (
           <div>
-            <h2>{activeTab === 'myInvestigations' ? 'My Active Investigations' : 'Completed Investigations'}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>{activeTab === 'myInvestigations' ? 'My Active Investigations' : 'Completed Investigations'}</h2>
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="status-filter-select"
+              >
+                <option value="all">All Locations</option>
+                {BARANGAYS.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
             <div className="investigations-list">
               {myInvestigations.map(investigation => {
                 const isExpanded = expandedInvestigation === investigation._id;
@@ -661,7 +700,19 @@ const EnforcerDashboard = () => {
 
         {activeTab === 'myTickets' && (
           <div>
-            <h2>My Submitted Tickets</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>My Submitted Tickets</h2>
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="status-filter-select"
+              >
+                <option value="all">All Locations</option>
+                {BARANGAYS.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
             <div className="complaints-list">
               {myTickets.length > 0 ? (
                 <>

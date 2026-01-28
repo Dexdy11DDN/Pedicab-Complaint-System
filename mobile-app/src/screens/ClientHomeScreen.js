@@ -4,6 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { complaintsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { BARANGAYS } from '../utils/locations';
 import Sidebar from '../components/Sidebar';
 
 const ClientHomeScreen = ({ navigation }) => {
@@ -26,6 +27,8 @@ const ClientHomeScreen = ({ navigation }) => {
     location: '',
     incidentDate: new Date().toISOString().split('T')[0]
   });
+  const [filteredLocations, setFilteredLocations] = useState([]);
+  const [showLocationList, setShowLocationList] = useState(false);
 
   const updateOrientation = () => {
     const { width, height } = Dimensions.get('window');
@@ -165,6 +168,23 @@ const ClientHomeScreen = ({ navigation }) => {
     ).join(' ');
   };
 
+  const handleLocationChange = (text) => {
+    setFormData({ ...formData, location: text });
+    if (text) {
+      const filtered = BARANGAYS.filter(l => l.toLowerCase().includes(text.toLowerCase()));
+      setFilteredLocations(filtered);
+      setShowLocationList(true);
+    } else {
+      setFilteredLocations([]);
+      setShowLocationList(false);
+    }
+  };
+
+  const selectLocation = (location) => {
+    setFormData({ ...formData, location: location });
+    setShowLocationList(false);
+  };
+
   return (
     <View style={styles.container}>
       <Sidebar
@@ -276,15 +296,35 @@ const ClientHomeScreen = ({ navigation }) => {
                 />
               </View>
 
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
+              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8, zIndex: 1000 }]}>
                 <Text style={styles.label}>Location *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Where did it occur?"
-                  placeholderTextColor="#999"
-                  value={formData.location}
-                  onChangeText={(text) => setFormData({ ...formData, location: text })}
-                />
+                <View style={{ position: 'relative' }}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Where did it occur?"
+                    placeholderTextColor="#999"
+                    value={formData.location}
+                    onChangeText={handleLocationChange}
+                    onFocus={() => {
+                      if (formData.location) setShowLocationList(true);
+                    }}
+                  />
+                  {showLocationList && filteredLocations.length > 0 && (
+                    <View style={styles.mobileDropdown}>
+                      <ScrollView style={{ maxHeight: 150 }} keyboardShouldPersistTaps="handled">
+                        {filteredLocations.map((loc, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            onPress={() => selectLocation(loc)}
+                            style={styles.mobileDropdownItem}
+                          >
+                            <Text style={styles.mobileDropdownText}>{loc}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -704,6 +744,31 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
     marginTop: 8,
+  },
+  mobileDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 2000,
+  },
+  mobileDropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  mobileDropdownText: {
+    fontSize: 14,
+    color: '#333',
   },
 });
 

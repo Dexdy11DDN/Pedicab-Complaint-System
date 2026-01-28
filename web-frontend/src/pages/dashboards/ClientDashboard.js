@@ -6,6 +6,7 @@ import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
 import Sidebar from '../../components/Sidebar';
 import { useToast, handleApiError } from '../../components/ErrorToast';
+import { BARANGAYS } from '../../utils/locations';
 import './Dashboard.css';
 
 const ClientDashboard = () => {
@@ -25,6 +26,9 @@ const ClientDashboard = () => {
     location: '',
     incidentDate: ''
   });
+  const [suggestion, setSuggestion] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredBarangays, setFilteredBarangays] = useState([]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -125,6 +129,47 @@ const ClientDashboard = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, location: value });
+
+    if (value) {
+      const matches = BARANGAYS.filter(b => b.toLowerCase().includes(value.toLowerCase()));
+      setFilteredBarangays(matches);
+      setShowDropdown(true);
+
+      const match = BARANGAYS.find(b => b.toLowerCase().startsWith(value.toLowerCase()));
+      if (match && value.toLowerCase() !== match.toLowerCase()) {
+        const remaining = match.slice(value.length);
+        setSuggestion(value + remaining);
+      } else {
+        setSuggestion('');
+      }
+    } else {
+      setFilteredBarangays([]);
+      setSuggestion('');
+      setShowDropdown(false);
+    }
+  };
+
+  const handleLocationKeyDown = (e) => {
+    if (e.key === 'Tab' && suggestion) {
+      e.preventDefault();
+      setFormData({ ...formData, location: suggestion });
+      setSuggestion('');
+      setShowDropdown(false);
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
+  };
+
+  const selectBarangay = (barangay) => {
+    setFormData({ ...formData, location: barangay });
+    setSuggestion('');
+    setFilteredBarangays([]);
+    setShowDropdown(false);
   };
 
   const getStatusColor = (status) => {
@@ -243,14 +288,37 @@ const ClientDashboard = () => {
                 </div>
                 <div className="form-group">
                   <label>Location *</label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    required
-                    placeholder="Where did the incident occur?"
-                  />
+                  <div className="autocomplete-wrapper">
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleLocationChange}
+                      onKeyDown={handleLocationKeyDown}
+                      onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                      required
+                      placeholder="Where did the incident occur?"
+                      autoComplete="off"
+                    />
+                    {suggestion && formData.location && (
+                      <div className="suggestion-ghost">
+                        {suggestion}
+                      </div>
+                    )}
+                    {showDropdown && filteredBarangays.length > 0 && (
+                      <div className="autocomplete-dropdown">
+                        {filteredBarangays.map((b, index) => (
+                          <div
+                            key={index}
+                            className="autocomplete-item"
+                            onClick={() => selectBarangay(b)}
+                          >
+                            {b}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
