@@ -12,3 +12,4 @@ build/
 *.ipa
 android/.gradle
 ios/Pods/
+SQLITE_IMPLEMENTATION.md

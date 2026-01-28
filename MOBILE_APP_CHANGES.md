@@ -1,6 +1,57 @@
 # Mobile App Implementation Guide
 **Based on Web Frontend Changes**
-**Date:** November 27, 2025
+**Date:** January 28, 2026
+
+---
+
+## 📍 Location Selection - Autocomplete (Latest Update)
+
+### 1. Predefined Barangays List
+Create `src/utils/locations.js`:
+```javascript
+export const BARANGAYS = [
+    'Bagacay', 'Bajumpandan', 'Balugo', 'Banilad', 'Bantayan', ...
+];
+```
+
+### 2. Searchable Location Picker
+**NEW (replacing free text):**
+```javascript
+const [filteredLocations, setFilteredLocations] = useState([]);
+const [showLocationList, setShowLocationList] = useState(false);
+
+const handleLocationChange = (text) => {
+  setFormData({...formData, location: text});
+  if (text.length > 0) {
+    const filtered = BARANGAYS.filter(b => 
+      b.toLowerCase().startsWith(text.toLowerCase())
+    );
+    setFilteredLocations(filtered);
+    setShowLocationList(true);
+  } else {
+    setShowLocationList(false);
+  }
+};
+```
+
+---
+
+## 🤖 Android Build System Optimization
+
+### 1. Gradle 8.3 Compatibility
+Update `android/build.gradle`:
+```gradle
+allprojects {
+    repositories {
+        maven { url("$rootDir/../node_modules/react-native/android") }
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+    // Modern syntax for build redirection
+    layout.buildDirectory.set(file("C:/tmp/build/${rootProject.name}/${project.name}"))
+}
+```
 
 ---
 

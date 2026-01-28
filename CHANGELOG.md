@@ -1,6 +1,23 @@
 # Pedicab Complaint System - Change Log
 
-## Version 2.0 - Complete System Overhaul (Latest)
+## Version 2.1 - Location & Build Optimization (Current)
+**Date:** January 28, 2026
+**Status:** ✅ Completed
+
+### 📍 Location & Autocomplete
+- **New Feature:** Added a predefined list of 30 barangays for standardized location reporting.
+- **Web Frontend:** Implemented custom autocomplete dropdown with "ghost text" suggestions and Tab-completion.
+- **Mobile App:** Implemented searchable location picker with real-time filtering.
+- **Location Filtering:** Added location-based filtering for Admins and Enforcers across all dashboard tabs (Complaints, Investigations, Tickets).
+
+### 🤖 Android Build Optimization
+- **Modern Gradle:** Updated `android/build.gradle` to modern Gradle 8.3 syntax (`layout.buildDirectory`).
+- **Path Resolution:** Added standard repository paths to fix dependency resolution for native modules like `react-native-screens`.
+- **Windows Fix:** Stabilized build redirection to `C:/tmp` to prevent "Long Path" errors on Windows.
+
+---
+
+## Version 2.0 - Complete System Overhaul
 **Date:** November 27, 2025
 **Status:** ✅ Completed and Deployed
 
