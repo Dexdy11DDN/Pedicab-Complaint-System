@@ -170,14 +170,11 @@ const ClientHomeScreen = ({ navigation }) => {
 
   const handleLocationChange = (text) => {
     setFormData({ ...formData, location: text });
-    if (text) {
-      const filtered = BARANGAYS.filter(l => l.toLowerCase().includes(text.toLowerCase()));
-      setFilteredLocations(filtered);
-      setShowLocationList(true);
-    } else {
-      setFilteredLocations([]);
-      setShowLocationList(false);
-    }
+    const filtered = text
+      ? BARANGAYS.filter(l => l.toLowerCase().includes(text.toLowerCase()))
+      : BARANGAYS;
+    setFilteredLocations(filtered);
+    setShowLocationList(true);
   };
 
   const selectLocation = (location) => {
@@ -306,7 +303,8 @@ const ClientHomeScreen = ({ navigation }) => {
                     value={formData.location}
                     onChangeText={handleLocationChange}
                     onFocus={() => {
-                      if (formData.location) setShowLocationList(true);
+                      setFilteredLocations(formData.location ? BARANGAYS.filter(l => l.toLowerCase().includes(formData.location.toLowerCase())) : BARANGAYS);
+                      setShowLocationList(true);
                     }}
                   />
                   {showLocationList && filteredLocations.length > 0 && (

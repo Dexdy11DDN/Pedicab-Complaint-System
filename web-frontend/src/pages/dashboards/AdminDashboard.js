@@ -74,6 +74,10 @@ const AdminDashboard = () => {
         const location = type === 'complaints' ? item.location :
           (type === 'investigations' ? (item.complaint?.location || item.location) :
             (type === 'tickets' ? (item.investigation?.complaint?.location || item.complaint?.location) : null));
+
+        if (filterLocation === 'other') {
+          return location && !BARANGAYS.includes(location);
+        }
         return location === filterLocation;
       });
     }
@@ -600,6 +604,7 @@ const AdminDashboard = () => {
                   className="status-filter-select"
                 >
                   <option value="all">All Locations</option>
+                  <option value="other">Other / Not in list</option>
                   {BARANGAYS.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}
@@ -706,6 +711,7 @@ const AdminDashboard = () => {
                   className="status-filter-select"
                 >
                   <option value="all">All Locations</option>
+                  <option value="other">Other / Not in list</option>
                   {BARANGAYS.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}
@@ -789,6 +795,7 @@ const AdminDashboard = () => {
                   className="status-filter-select"
                 >
                   <option value="all">All Locations</option>
+                  <option value="other">Other / Not in list</option>
                   {BARANGAYS.map(b => (
                     <option key={b} value={b}>{b}</option>
                   ))}

@@ -8,7 +8,8 @@
 - **New Feature:** Added a predefined list of 30 barangays for standardized location reporting.
 - **Web Frontend:** Implemented custom autocomplete dropdown with "ghost text" suggestions and Tab-completion.
 - **Mobile App:** Implemented searchable location picker with real-time filtering.
-- **Location Filtering:** Added location-based filtering for Admins and Enforcers across all dashboard tabs (Complaints, Investigations, Tickets).
+- **Location Selection:** Updated autocomplete to show the full list on focus/empty, narrowing down as the user types.
+- **Location Filtering:** Added "Other / Not in list" filter for Admins and Enforcers to catch unconventional location entries.
 
 ### 🤖 Android Build Optimization
 - **Modern Gradle:** Updated `android/build.gradle` to modern Gradle 8.3 syntax (`layout.buildDirectory`).

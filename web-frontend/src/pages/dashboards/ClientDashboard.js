@@ -135,11 +135,14 @@ const ClientDashboard = () => {
     const value = e.target.value;
     setFormData({ ...formData, location: value });
 
-    if (value) {
-      const matches = BARANGAYS.filter(b => b.toLowerCase().includes(value.toLowerCase()));
-      setFilteredBarangays(matches);
-      setShowDropdown(true);
+    const matches = value
+      ? BARANGAYS.filter(b => b.toLowerCase().includes(value.toLowerCase()))
+      : BARANGAYS;
 
+    setFilteredBarangays(matches);
+    setShowDropdown(true);
+
+    if (value) {
       const match = BARANGAYS.find(b => b.toLowerCase().startsWith(value.toLowerCase()));
       if (match && value.toLowerCase() !== match.toLowerCase()) {
         const remaining = match.slice(value.length);
@@ -148,9 +151,7 @@ const ClientDashboard = () => {
         setSuggestion('');
       }
     } else {
-      setFilteredBarangays([]);
       setSuggestion('');
-      setShowDropdown(false);
     }
   };
 
@@ -294,6 +295,10 @@ const ClientDashboard = () => {
                       name="location"
                       value={formData.location}
                       onChange={handleLocationChange}
+                      onFocus={() => {
+                        setFilteredBarangays(formData.location ? BARANGAYS.filter(b => b.toLowerCase().includes(formData.location.toLowerCase())) : BARANGAYS);
+                        setShowDropdown(true);
+                      }}
                       onKeyDown={handleLocationKeyDown}
                       onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                       required

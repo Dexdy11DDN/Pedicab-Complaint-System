@@ -148,7 +148,13 @@ const EnforcerDashboard = () => {
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         if (filterLocation !== 'all') {
-          openOnly = openOnly.filter(inv => (inv.complaint?.location || inv.location) === filterLocation);
+          openOnly = openOnly.filter(inv => {
+            const loc = inv.complaint?.location || inv.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
         }
         setAvailableInvestigations(openOnly);
       } else if (activeTab === 'myInvestigations' || activeTab === 'completedInvestigations') {
@@ -156,7 +162,13 @@ const EnforcerDashboard = () => {
         let allMyInvestigations = response.data.investigations || [];
 
         if (filterLocation !== 'all') {
-          allMyInvestigations = allMyInvestigations.filter(inv => (inv.complaint?.location || inv.location) === filterLocation);
+          allMyInvestigations = allMyInvestigations.filter(inv => {
+            const loc = inv.complaint?.location || inv.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
         }
 
         // Split into active and completed
@@ -174,7 +186,13 @@ const EnforcerDashboard = () => {
         let tickets = (response.data.tickets || response.data);
 
         if (filterLocation !== 'all') {
-          tickets = tickets.filter(ticket => (ticket.investigation?.complaint?.location || ticket.complaint?.location) === filterLocation);
+          tickets = tickets.filter(ticket => {
+            const loc = ticket.investigation?.complaint?.location || ticket.complaint?.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
         }
 
         tickets = tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -449,6 +467,7 @@ const EnforcerDashboard = () => {
                 className="status-filter-select"
               >
                 <option value="all">All Locations</option>
+                <option value="other">Other / Not in list</option>
                 {BARANGAYS.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
@@ -525,6 +544,7 @@ const EnforcerDashboard = () => {
                 className="status-filter-select"
               >
                 <option value="all">All Locations</option>
+                <option value="other">Other / Not in list</option>
                 {BARANGAYS.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
@@ -708,6 +728,7 @@ const EnforcerDashboard = () => {
                 className="status-filter-select"
               >
                 <option value="all">All Locations</option>
+                <option value="other">Other / Not in list</option>
                 {BARANGAYS.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
