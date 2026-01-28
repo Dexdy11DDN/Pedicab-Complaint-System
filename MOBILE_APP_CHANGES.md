@@ -24,7 +24,7 @@ const handleLocationChange = (text) => {
   setFormData({...formData, location: text});
   if (text.length > 0) {
     const filtered = BARANGAYS.filter(b => 
-      b.toLowerCase().startsWith(text.toLowerCase())
+      b.toLowerCase().includes(text.toLowerCase())
     );
     setFilteredLocations(filtered);
     setShowLocationList(true);
@@ -32,6 +32,7 @@ const handleLocationChange = (text) => {
     setShowLocationList(false);
   }
 };
+// TIP: Use zIndex: 1000 on the wrapper container to ensure the dropdown overlays other elements
 ```
 
 ---

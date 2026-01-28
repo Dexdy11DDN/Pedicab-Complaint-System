@@ -82,9 +82,6 @@
 ## 🔍 Enforcer Dashboard Changes
 
 ### Major Feature Additions
-## 🔍 Enforcer Dashboard Changes
-
-### Major Feature Additions
 
 #### Quest-Based Investigation System
 - **Compact quest cards** with click-to-expand functionality

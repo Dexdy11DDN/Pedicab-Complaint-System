@@ -489,7 +489,7 @@ const EnforcerDashboard = () => {
                         </div>
                         <div className="instructions-section">
                           <p><strong>Investigation Instructions:</strong></p>
-                          <p>{investigation.instructions || `Conduct on-site investigation of franchise #${investigation.complaint?.franchiseNumber} and verify all reported issues.`}</p>
+                          <p>{investigation.instructions || `Conduct on-site investigation of franchise #${investigation.franchiseNumber || investigation.complaint?.franchiseNumber} and verify all reported issues.`}</p>
                         </div>
                         <button
                           onClick={(e) => {
@@ -565,7 +565,7 @@ const EnforcerDashboard = () => {
                         </div>
                         <div className="instructions-section">
                           <p><strong>Investigation Instructions:</strong></p>
-                          <p>{investigation.instructions || `Conduct on-site investigation of franchise #${investigation.complaint?.franchiseNumber} and verify all reported issues.`}</p>
+                          <p>{investigation.instructions || `Conduct on-site investigation of franchise #${investigation.franchiseNumber || investigation.complaint?.franchiseNumber} and verify all reported issues.`}</p>
                         </div>
 
                         {selectedInvestigation === investigation._id ? (
