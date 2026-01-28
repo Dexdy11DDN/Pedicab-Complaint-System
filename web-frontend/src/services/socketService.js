@@ -28,33 +28,46 @@ class SocketService {
         reconnectionDelay: 1000,
       });
 
-      this.socket.on('connect', () => {
-        console.log('[Socket] Connected:', this.socket.id);
+      const socket = this.socket;
+
+      socket.on('connect', () => {
+        // Safety check: verify this is still the active socket and not null
+        if (!this.socket || this.socket !== socket) {
+          console.log('[Socket] Connect event fired for obsolete or disconnected socket');
+          return;
+        }
+
+        console.log('[Socket] Connected:', socket.id);
         this.isConnected = true;
 
         // Join user-specific rooms
         if (user) {
-          this.socket.emit('join', {
-            userId: user.id,
+          socket.emit('join', {
+            userId: user.id || user._id,
             role: user.role
           });
         }
       });
 
-      this.socket.on('disconnect', (reason) => {
+      socket.on('disconnect', (reason) => {
         console.log('[Socket] Disconnected:', reason);
-        this.isConnected = false;
+        // Only set connected to false if this is still the active socket
+        if (this.socket === socket) {
+          this.isConnected = false;
+        }
       });
 
-      this.socket.on('connect_error', (error) => {
+      socket.on('connect_error', (error) => {
         console.log('[Socket] Connection error:', error.message);
-        this.isConnected = false;
+        if (this.socket === socket) {
+          this.isConnected = false;
+        }
       });
 
       // Re-register all existing listeners
       this.listeners.forEach((callbacks, event) => {
         callbacks.forEach(callback => {
-          this.socket.on(event, callback);
+          socket.on(event, callback);
         });
       });
 

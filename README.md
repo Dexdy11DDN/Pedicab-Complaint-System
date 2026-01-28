@@ -34,7 +34,8 @@ The system comes with three pre-seeded accounts for testing:
   - 4-digit franchise number (validated input, e.g., "1006")
   - Incident category dropdown (traffic violations, safety issues, etc.)
   - Date and time picker for incident
-  - Location field (free text)
+  - Location selection with real-time **autocomplete** and filtering (predefined barangay list)
+  - Visual suggestion (ghost text) and Tab-completion support
   - Detailed description textarea
   - Form validation for all required fields
 - **Compact Complaint History:**
@@ -81,6 +82,7 @@ The system comes with three pre-seeded accounts for testing:
   2. **My Investigations** - Track accepted assignments
   3. **My Tickets** - View submission history
   4. **Franchises** - Search franchise database
+- **Location Filtering:** Filter investigation quests and submitted tickets by specific locations/barangays (Available across all tabs)
 
 **Available Investigations (Quest System):**
 - **Compact quest cards** with click-to-expand functionality
@@ -221,6 +223,7 @@ The system comes with three pre-seeded accounts for testing:
     - **Filter by:**
         - **Category:** Dropdown including "Sexual Harassment"
         - **Status:** Dropdown (Submitted, Under Review, etc.)
+        - **Location:** Filter complaints by specific barangay
 - **Table/List view** with complete complaint details
 - **Two-step approval workflow:**
   1. **Review Stage:**
@@ -254,7 +257,9 @@ The system comes with three pre-seeded accounts for testing:
     - Specific instructions for enforcer
 - **Sorting & Filtering:**
     - **Sort by:** Status
-    - **Filter by:** Status (Open, Accepted, Completed)
+    - **Filter by:** 
+        - **Status:** (Open, Accepted, Completed)
+        - **Location:** Filter quests by specific barangay
 - **View all investigations** in list format
 - **Investigation cards show:**
   - Investigation number (INV-YYYY-NNNN)
@@ -279,7 +284,9 @@ The system comes with three pre-seeded accounts for testing:
 - **View all submitted tickets** from enforcers
 - **Sorting & Filtering:**
     - **Sort by:** Status, Date
-    - **Filter by:** Status (Submitted, Under Review, Resolved, Rejected)
+    - **Filter by:** 
+        - **Status:** (Submitted, Under Review, Resolved, Rejected)
+        - **Location:** Filter tickets by specific barangay
 - **Table view** with columns:
   - Ticket ID (TKT-YYYY-NNNN)
   - Franchise Number
