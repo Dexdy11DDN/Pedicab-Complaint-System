@@ -20,10 +20,11 @@ import { searchFranchises, getFranchiseCount } from '../database/franchises';
 import { syncWithAPI, loadInitialData } from '../database/sync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { BARANGAYS } from '../utils/locations';
 
 const AdminScreen = ({ navigation }) => {
   const { user } = useAuth();
-  
+
   // State management
   const [activeTab, setActiveTab] = useState('overview');
   const [complaints, setComplaints] = useState([]);
@@ -34,12 +35,13 @@ const AdminScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({ complaints: 0, investigations: 0, tickets: 0, franchises: 0 });
-  
+
   // Database states
   const [dbInitialized, setDbInitialized] = useState(false);
   const [franchiseCount, setFranchiseCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState('synced');
-  
+  const [filterLocation, setFilterLocation] = useState('all');
+
   // UI states
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [selectedInvestigation, setSelectedInvestigation] = useState(null);
@@ -47,7 +49,7 @@ const AdminScreen = ({ navigation }) => {
   const [showManualInvForm, setShowManualInvForm] = useState(false);
   const [showForwardForm, setShowForwardForm] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
-  
+
   // Manual investigation form
   const [manualInvForm, setManualInvForm] = useState({
     franchiseNumber: '',
@@ -75,7 +77,7 @@ const AdminScreen = ({ navigation }) => {
     if (activeTab !== 'franchises') {
       loadData();
     }
-  }, [activeTab]);
+  }, [activeTab, filterLocation]);
 
   const setupDatabase = async () => {
     try {
@@ -88,7 +90,7 @@ const AdminScreen = ({ navigation }) => {
         if (token) {
           setSyncStatus('syncing...');
           const syncResult = await syncWithAPI(token);
-          
+
           if (syncResult.success && syncResult.count > 0) {
             setFranchiseCount(syncResult.count);
             setSyncStatus('synced');
@@ -118,19 +120,55 @@ const AdminScreen = ({ navigation }) => {
     try {
       if (activeTab === 'overview' || activeTab === 'complaints') {
         const compResponse = await complaintsAPI.getAll();
-        setComplaints(compResponse.data);
+        let comps = compResponse.data || [];
+
+        if (filterLocation !== 'all') {
+          comps = comps.filter(item => {
+            const loc = item.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
+        setComplaints(comps);
         setStats(prev => ({ ...prev, complaints: compResponse.data.length }));
       }
-      
+
       if (activeTab === 'overview' || activeTab === 'investigations') {
         const invResponse = await investigationsAPI.getAll();
-        setInvestigations(invResponse.data);
+        let invs = invResponse.data || [];
+
+        if (filterLocation !== 'all') {
+          invs = invs.filter(item => {
+            const loc = item.complaint?.location || item.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
+        setInvestigations(invs);
         setStats(prev => ({ ...prev, investigations: invResponse.data.length }));
       }
-      
+
       if (activeTab === 'overview' || activeTab === 'tickets') {
         const ticketResponse = await ticketsAPI.getAll();
-        setTickets(ticketResponse.data);
+        let tickets = ticketResponse.data || [];
+
+        if (filterLocation !== 'all') {
+          tickets = tickets.filter(item => {
+            const loc = item.investigation?.complaint?.location || item.complaint?.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
+        setTickets(tickets);
         setStats(prev => ({ ...prev, tickets: ticketResponse.data.length }));
       }
     } catch (error) {
@@ -177,7 +215,7 @@ const AdminScreen = ({ navigation }) => {
         description: `Investigation for complaint ${complaint.complaintNumber}`,
         instructions: `1. Visit franchise location\n2. Verify complaint details\n3. Document evidence\n4. Submit ticket with findings`
       });
-      
+
       Alert.alert('Success', 'Investigation created successfully');
       loadData();
       setSelectedComplaint(null);
@@ -198,7 +236,7 @@ const AdminScreen = ({ navigation }) => {
         description: manualInvForm.description,
         instructions: manualInvForm.instructions || 'Conduct thorough investigation.'
       });
-      
+
       Alert.alert('Success', 'Manual investigation created');
       setManualInvForm({ franchiseNumber: '', description: '', instructions: '' });
       setShowManualInvForm(false);
@@ -269,7 +307,7 @@ const AdminScreen = ({ navigation }) => {
 
     setSyncStatus('syncing...');
     const result = await syncWithAPI(token);
-    
+
     if (result.success) {
       setFranchiseCount(result.count);
       setSyncStatus('synced');
@@ -362,7 +400,7 @@ const AdminScreen = ({ navigation }) => {
                 <Text style={styles.statLabel}>Franchises</Text>
               </View>
             </View>
-            
+
             <Text style={styles.subsectionTitle}>Recent Activity</Text>
             <Text style={styles.infoText}>All systems operational. Use tabs above to manage different areas.</Text>
           </View>
@@ -371,7 +409,22 @@ const AdminScreen = ({ navigation }) => {
         {/* Complaints Tab */}
         {activeTab === 'complaints' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Manage Complaints</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Manage Complaints</Text>
+              <View style={styles.filterContainer}>
+                <Picker
+                  selectedValue={filterLocation}
+                  onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                  style={styles.filterPicker}
+                >
+                  <Picker.Item label="📍 All Locations" value="all" />
+                  <Picker.Item label="📍 Other / Not in list" value="other" />
+                  {BARANGAYS.map(b => (
+                    <Picker.Item key={b} label={b} value={b} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : complaints.length === 0 ? (
@@ -389,7 +442,7 @@ const AdminScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(complaint.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.cardTitle}>Franchise #{complaint.franchiseNumber}</Text>
                   <Text style={styles.cardDetail}>{complaint.category}</Text>
                   <Text style={styles.cardDetail}>📍 {complaint.location}</Text>
@@ -406,7 +459,22 @@ const AdminScreen = ({ navigation }) => {
         {activeTab === 'investigations' && (
           <View style={styles.tabContent}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Manage Investigations</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Manage Investigations</Text>
+                <View style={styles.filterContainer}>
+                  <Picker
+                    selectedValue={filterLocation}
+                    onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                    style={styles.filterPicker}
+                  >
+                    <Picker.Item label="📍 All Locations" value="all" />
+                    <Picker.Item label="📍 Other / Not in list" value="other" />
+                    {BARANGAYS.map(b => (
+                      <Picker.Item key={b} label={b} value={b} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => setShowManualInvForm(true)}
@@ -414,7 +482,7 @@ const AdminScreen = ({ navigation }) => {
                 <Text style={styles.addButtonText}>+ Manual</Text>
               </TouchableOpacity>
             </View>
-            
+
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : investigations.length === 0 ? (
@@ -434,7 +502,7 @@ const AdminScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(inv.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.cardTitle}>
                     Franchise #{inv.franchiseNumber || inv.complaint?.franchiseNumber}
                   </Text>
@@ -456,7 +524,22 @@ const AdminScreen = ({ navigation }) => {
         {/* Tickets Tab */}
         {activeTab === 'tickets' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Manage Tickets</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Manage Tickets</Text>
+              <View style={styles.filterContainer}>
+                <Picker
+                  selectedValue={filterLocation}
+                  onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                  style={styles.filterPicker}
+                >
+                  <Picker.Item label="📍 All Locations" value="all" />
+                  <Picker.Item label="📍 Other / Not in list" value="other" />
+                  {BARANGAYS.map(b => (
+                    <Picker.Item key={b} label={b} value={b} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : tickets.length === 0 ? (
@@ -474,7 +557,7 @@ const AdminScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(ticket.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.cardTitle}>Franchise #{ticket.franchiseNumber}</Text>
                   <Text style={styles.cardDetail}>
                     👮 {ticket.enforcer?.firstName} {ticket.enforcer?.lastName}
@@ -495,7 +578,7 @@ const AdminScreen = ({ navigation }) => {
         {activeTab === 'franchises' && (
           <View style={styles.tabContent}>
             <Text style={styles.sectionTitle}>Franchise Database (Offline Mode)</Text>
-            
+
             <View style={styles.statusBar}>
               <Text style={styles.statusBarText}>
                 {franchiseCount} franchises • {syncStatus}
@@ -532,7 +615,7 @@ const AdminScreen = ({ navigation }) => {
                       <Text style={styles.statusText}>{(franchise.status || '').toUpperCase()}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.ownerName}>{franchise.ownerName}</Text>
                   <Text style={styles.franchiseDetail}>📞 {franchise.contactNumber}</Text>
                   <Text style={styles.franchiseDetail}>📍 {franchise.address}</Text>
@@ -1052,6 +1135,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 15,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    flexWrap: 'wrap',
+  },
+  filterContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    minWidth: 150,
+  },
+  filterPicker: {
+    height: 40,
+    width: 180,
+    color: '#333',
   },
 });
 

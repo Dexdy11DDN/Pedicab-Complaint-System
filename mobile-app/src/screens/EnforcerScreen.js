@@ -14,6 +14,8 @@ import {
   Dimensions
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { Picker } from '@react-native-picker/picker';
+import { BARANGAYS } from '../utils/locations';
 import { investigationsAPI, ticketsAPI } from '../services/api';
 import { initDatabase } from '../database/init';
 import { searchFranchises, getFranchiseCount } from '../database/franchises';
@@ -41,6 +43,7 @@ const EnforcerScreen = ({ navigation }) => {
   const [franchiseCount, setFranchiseCount] = useState(0);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [syncStatus, setSyncStatus] = useState('synced');
+  const [filterLocation, setFilterLocation] = useState('all');
 
   // UI states
   const [expandedInvestigation, setExpandedInvestigation] = useState(null);
@@ -132,7 +135,7 @@ const EnforcerScreen = ({ navigation }) => {
     if (activeTab !== 'franchises') {
       loadData();
     }
-  }, [activeTab]);
+  }, [activeTab, filterLocation]);
 
   const setupDatabase = async () => {
     try {
@@ -187,7 +190,18 @@ const EnforcerScreen = ({ navigation }) => {
         // Backend returns { investigations: [...] }
         const data = response.data.investigations || response.data;
         // Filter to only show open investigations (not accepted or completed)
-        const openOnly = Array.isArray(data) ? data.filter(inv => inv.status === 'open') : [];
+        let openOnly = Array.isArray(data) ? data.filter(inv => inv.status === 'open') : [];
+
+        if (filterLocation !== 'all') {
+          openOnly = openOnly.filter(inv => {
+            const loc = inv.complaint?.location || inv.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
         setAvailableInvestigations(openOnly);
         console.log('Available investigations loaded:', openOnly.length);
       } else if (activeTab === 'myInvestigations') {
@@ -196,16 +210,40 @@ const EnforcerScreen = ({ navigation }) => {
         console.log('My investigations response:', response.data);
         // Backend returns { investigations: [...] }
         const data = response.data.investigations || response.data;
-        setMyInvestigations(Array.isArray(data) ? data : []);
-        console.log('My investigations loaded:', data.length);
+        let myInv = Array.isArray(data) ? data : [];
+
+        if (filterLocation !== 'all') {
+          myInv = myInv.filter(inv => {
+            const loc = inv.complaint?.location || inv.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
+        setMyInvestigations(myInv);
+        console.log('My investigations loaded:', myInv.length);
       } else if (activeTab === 'myTickets') {
         console.log('Loading my tickets...');
         const response = await ticketsAPI.getAll();
         console.log('My tickets response:', response.data);
         // Backend returns { tickets: [...] }
         const data = response.data.tickets || response.data;
-        setMyTickets(Array.isArray(data) ? data : []);
-        console.log('My tickets loaded:', data.length);
+        let tickets = Array.isArray(data) ? data : [];
+
+        if (filterLocation !== 'all') {
+          tickets = tickets.filter(ticket => {
+            const loc = ticket.investigation?.complaint?.location || ticket.complaint?.location;
+            if (filterLocation === 'other') {
+              return loc && !BARANGAYS.includes(loc);
+            }
+            return loc === filterLocation;
+          });
+        }
+
+        setMyTickets(tickets);
+        console.log('My tickets loaded:', tickets.length);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -405,7 +443,22 @@ const EnforcerScreen = ({ navigation }) => {
         {/* Available Investigations */}
         {activeTab === 'available' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Available Investigation Quests</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Available Investigation Quests</Text>
+              <View style={styles.filterContainer}>
+                <Picker
+                  selectedValue={filterLocation}
+                  onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                  style={styles.filterPicker}
+                >
+                  <Picker.Item label="📍 All Locations" value="all" />
+                  <Picker.Item label="📍 Other / Not in list" value="other" />
+                  {BARANGAYS.map(b => (
+                    <Picker.Item key={b} label={b} value={b} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : availableInvestigations.length === 0 ? (
@@ -424,9 +477,6 @@ const EnforcerScreen = ({ navigation }) => {
                     </View>
                   </View>
 
-                  <Text style={styles.franchiseNum}>
-                    Franchise #{inv.franchiseNumber || inv.complaint?.franchiseNumber || 'N/A'}
-                  </Text>
                   <Text style={styles.category}>
                     {inv.complaint?.category || 'Manual Investigation'}
                   </Text>
@@ -466,7 +516,22 @@ const EnforcerScreen = ({ navigation }) => {
         {/* My Investigations */}
         {activeTab === 'myInvestigations' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>My Active Investigations</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Active Investigations</Text>
+              <View style={styles.filterContainer}>
+                <Picker
+                  selectedValue={filterLocation}
+                  onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                  style={styles.filterPicker}
+                >
+                  <Picker.Item label="📍 All Locations" value="all" />
+                  <Picker.Item label="📍 Other / Not in list" value="other" />
+                  {BARANGAYS.map(b => (
+                    <Picker.Item key={b} label={b} value={b} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : myInvestigations.length === 0 ? (
@@ -532,7 +597,22 @@ const EnforcerScreen = ({ navigation }) => {
         {/* My Tickets */}
         {activeTab === 'myTickets' && (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>My Submitted Tickets</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Submitted Tickets</Text>
+              <View style={styles.filterContainer}>
+                <Picker
+                  selectedValue={filterLocation}
+                  onValueChange={(itemValue) => setFilterLocation(itemValue)}
+                  style={styles.filterPicker}
+                >
+                  <Picker.Item label="📍 All Locations" value="all" />
+                  <Picker.Item label="📍 Other / Not in list" value="other" />
+                  {BARANGAYS.map(b => (
+                    <Picker.Item key={b} label={b} value={b} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
             {loading ? (
               <ActivityIndicator size="large" color="#ff8c42" style={{ marginTop: 30 }} />
             ) : myTickets.length === 0 ? (
@@ -998,6 +1078,25 @@ const styles = StyleSheet.create({
   violationCard: { backgroundColor: '#f5f5f5', borderRadius: 8, padding: 12, marginBottom: 10 },
   violationType: { fontSize: 14, fontWeight: 'bold', color: '#ff8c42', marginBottom: 4 },
   violationNotes: { fontSize: 12, color: '#666', marginBottom: 8 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    flexWrap: 'wrap',
+  },
+  filterContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    minWidth: 150,
+  },
+  filterPicker: {
+    height: 40,
+    width: 180,
+    color: '#333',
+  },
 });
 
 export default EnforcerScreen;
