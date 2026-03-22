@@ -20,7 +20,7 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
-// Fix for Windows long path issues
+// Fix for Windows long path issues - use user home dir (always writable)
 allprojects {
     repositories {
         maven {
@@ -35,5 +35,7 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
-    layout.buildDirectory.set(file("C:/tmp/build/${rootProject.name}/${project.name}"))
+    def customBuildDir = file("${System.getProperty('user.home')}/.gradle-build/${rootProject.name}/${project.name}")
+    customBuildDir.mkdirs()
+    layout.buildDirectory.set(customBuildDir)
 }

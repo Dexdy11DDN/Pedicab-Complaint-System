@@ -1,6 +1,54 @@
 # Pedicab Complaint System - Change Log
 
-## Version 2.1 - Location & Build Optimization (Current)
+## Version 2.2 - Chatbot, Reviews & Mobile Enhancements (Current)
+**Date:** March 22, 2026
+**Status:** ✅ Completed
+
+### 💬 Complaint Chatbot Assistant
+- **Web Frontend:** Added `ComplaintChatbot` component with step-by-step guided complaint submission.
+- **Mobile App:** Added `ComplaintChatbotModal` with the same conversational workflow (franchise → category → date → location → description → confirm → submit).
+- **Smart Location:** Integrated barangay autocomplete/suggestions within the chatbot flow.
+- **Access:** Available via 💬 icon in the client dashboard header (both web and mobile).
+
+### ⭐ App Review System
+- **Backend:** New `AppReview` model and `/app-reviews` API routes (submit, get, update, delete reviews).
+- **Web Frontend:** Added `AppReview` component with star rating (1-5), comment field, and edit/update support.
+- **Mobile App:** Added `AppReviewModal` component with the same review functionality.
+- **Admin Dashboard (Web):** Added "App Reviews" section showing all reviews, average rating, and review management.
+- **Access:** Available via ⭐ icon in the client dashboard header (both web and mobile).
+
+### 🤖 Android Build Fix
+- **Root Cause:** `C:\tmp` directory had read-only permissions for normal users, preventing NDK intermediate directory creation.
+- **Fix:** Changed custom build output path from `C:/tmp/build/` to `~/.gradle-build/` (user home directory, always writable).
+- **Enhancement:** Added `mkdirs()` call to pre-create build directories during Gradle evaluation, preventing `react-native-screens` NDK path errors.
+
+### 🛠️ Code Quality
+- **ESLint:** Resolved `react-hooks/exhaustive-deps` warnings in `ComplaintChatbot.js`.
+- **Mobile Input Fix:** Added explicit text color (`#333`) and `placeholderTextColor` to chatbot input fields to fix invisible text on Android.
+
+### Files Added
+- `backend/models/AppReview.js` - Review data model
+- `backend/routes/appReviews.js` - Review API endpoints
+- `web-frontend/src/components/ComplaintChatbot.js` - Web chatbot component
+- `web-frontend/src/components/ComplaintChatbot.css` - Chatbot styles
+- `web-frontend/src/components/AppReview.js` - Web review component
+- `web-frontend/src/components/AppReview.css` - Review styles
+- `mobile-app/src/components/ComplaintChatbotModal.js` - Mobile chatbot
+- `mobile-app/src/components/AppReviewModal.js` - Mobile review modal
+
+### Files Modified
+- `backend/server.js` - Registered app review routes
+- `web-frontend/src/pages/dashboards/ClientDashboard.js` - Added chatbot & review buttons
+- `web-frontend/src/pages/dashboards/AdminDashboard.js` - Added reviews management section
+- `web-frontend/src/pages/dashboards/Dashboard.css` - New chatbot & review styles
+- `web-frontend/src/services/api.js` - Added `appReviewsAPI` endpoints
+- `mobile-app/src/screens/ClientHomeScreen.js` - Added chatbot & review buttons
+- `mobile-app/src/services/api.js` - Added `appReviewsAPI` endpoints
+- `mobile-app/android/build.gradle` - Fixed build directory path
+
+---
+
+## Version 2.1 - Location & Build Optimization
 **Date:** January 28, 2026
 **Status:** ✅ Completed
 
@@ -455,7 +503,7 @@
 
 ---
 
-**Version:** 2.0.0
-**Release Date:** November 27, 2025
+**Version:** 2.2.0
+**Release Date:** March 22, 2026
 **Contributors:** Development Team
 **Status:** ✅ Production Ready

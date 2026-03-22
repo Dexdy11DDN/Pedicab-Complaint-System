@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { complaintsAPI, franchisesAPI, investigationsAPI, ticketsAPI, authAPI } from '../../services/api';
-import { FaWifi } from 'react-icons/fa';
+import { complaintsAPI, franchisesAPI, investigationsAPI, ticketsAPI, authAPI, appReviewsAPI } from '../../services/api';
+import { FaWifi, FaStar, FaTrash } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
 import Sidebar from '../../components/Sidebar';
@@ -45,6 +45,8 @@ const AdminDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all'); // specific for complaints
   const [filterLocation, setFilterLocation] = useState('all');
+  const [appReviews, setAppReviews] = useState([]);
+  const [reviewAnalytics, setReviewAnalytics] = useState(null);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -250,6 +252,10 @@ const AdminDashboard = () => {
         setComplaints((complaintsRes.data.complaints || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setTickets((ticketsRes.data.tickets || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setEnforcers(enforcersRes.data.enforcers || []);
+      } else if (activeTab === 'analytics') {
+        const response = await appReviewsAPI.getAllReviews({ limit: 50 });
+        setAppReviews(response.data.reviews || []);
+        setReviewAnalytics(response.data.analytics || null);
       }
       setSyncStatus('synced');
     } catch (error) {
@@ -258,6 +264,22 @@ const AdminDashboard = () => {
       setSyncStatus('unable to sync');
       setMessage('Error loading data: ' + (error.response?.data?.message || error.message));
       setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) {
+      return;
+    }
+    try {
+      await appReviewsAPI.deleteReview(reviewId);
+      showSuccess('Review deleted successfully');
+      // Reload analytics
+      const response = await appReviewsAPI.getAllReviews({ limit: 50 });
+      setAppReviews(response.data.reviews || []);
+      setReviewAnalytics(response.data.analytics || null);
+    } catch (error) {
+      showError(handleApiError(error));
     }
   };
 
@@ -1523,6 +1545,97 @@ const AdminDashboard = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* App Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="analytics-section">
+            <h2>App Analytics & Reviews</h2>
+
+            {/* Analytics Summary */}
+            {reviewAnalytics && (
+              <div className="analytics-summary">
+                <div className="analytics-card main-rating">
+                  <div className="rating-display">
+                    <span className="big-rating">{reviewAnalytics.averageRating.toFixed(1)}</span>
+                    <div className="rating-stars">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <FaStar
+                          key={star}
+                          className={star <= Math.round(reviewAnalytics.averageRating) ? 'star-filled' : 'star-empty'}
+                        />
+                      ))}
+                    </div>
+                    <span className="total-reviews">{reviewAnalytics.totalReviews} reviews</span>
+                  </div>
+                </div>
+
+                <div className="analytics-card rating-distribution">
+                  <h4>Rating Distribution</h4>
+                  {[5, 4, 3, 2, 1].map((rating) => {
+                    const count = reviewAnalytics.distribution[rating] || 0;
+                    const percentage = reviewAnalytics.totalReviews > 0
+                      ? (count / reviewAnalytics.totalReviews) * 100
+                      : 0;
+                    return (
+                      <div key={rating} className="rating-bar-row">
+                        <span className="rating-label">{rating} <FaStar className="star-small" /></span>
+                        <div className="rating-bar">
+                          <div
+                            className="rating-bar-fill"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="rating-count">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews List */}
+            <div className="reviews-list-section">
+              <h3>User Reviews</h3>
+              {appReviews.length === 0 ? (
+                <p className="empty-state">No reviews yet.</p>
+              ) : (
+                <div className="reviews-list">
+                  {appReviews.map((review) => (
+                    <div key={review._id} className="review-card">
+                      <div className="review-header">
+                        <div className="review-user">
+                          <strong>{review.user?.firstName} {review.user?.lastName}</strong>
+                          <span className="review-email">{review.user?.email}</span>
+                        </div>
+                        <div className="review-rating">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <FaStar
+                              key={star}
+                              className={star <= review.rating ? 'star-filled' : 'star-empty'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="review-comment">{review.comment}</p>
+                      <div className="review-footer">
+                        <span className="review-date">
+                          {new Date(review.createdAt).toLocaleDateString()} at {new Date(review.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <button
+                          className="btn-delete-review"
+                          onClick={() => handleDeleteReview(review._id)}
+                          title="Delete review"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

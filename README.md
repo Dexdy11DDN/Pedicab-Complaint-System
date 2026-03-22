@@ -25,6 +25,8 @@ The system comes with three pre-seeded accounts for testing:
 - **Orange-Beige Theme:** Modern, warm color scheme (#ff8c42, #f4a261) with gradient effects
 - **Streamlined Header:** 
   - App name "Pedicab Complaint System" with personalized welcome message (top left)
+  - 💬 Complaint Assistant chatbot button (top right)
+  - ⭐ App Review button (top right)
   - Real-time connectivity status (● Online/● Offline) with sync indicator (top right)
   - Sign out button (top right)
 - **Quick Actions:** 
@@ -63,6 +65,18 @@ The system comes with three pre-seeded accounts for testing:
   - Automatic synchronization when online
   - Sync status updates (syncing.../synced/unable to sync)
   - Network state detection
+- **Complaint Chatbot Assistant (💬):**
+  - Step-by-step guided complaint submission via conversational interface
+  - Walks users through franchise number, category, date, location, and description
+  - Smart location autocomplete with barangay suggestions
+  - Confirmation summary before final submission
+  - Available on both **web** and **mobile** platforms
+- **App Review System (⭐):**
+  - Star rating system (1-5 stars)
+  - Written feedback/comments (up to 500 characters)
+  - Update existing reviews
+  - Available on both **web** and **mobile** platforms
+  - Admin can view all reviews and average ratings on the web dashboard
 - **Profile Management:**
   - View personal details (Name, Email, Role)
   - View total submitted complaints count
@@ -423,12 +437,15 @@ The system uses **Socket.IO** for real-time updates between web and mobile clien
 ├── web-frontend/        # React web application
 │   ├── src/
 │   │   ├── components/  # Reusable components
+│   │   │   ├── ComplaintChatbot.js  # Guided complaint assistant
+│   │   │   ├── AppReview.js        # App review/rating modal
+│   │   │   └── Sidebar.js          # Navigation sidebar
 │   │   ├── contexts/    # React contexts (Auth)
 │   │   ├── pages/       # Page components
 │   │   │   ├── dashboards/        # Role-specific dashboards
 │   │   │   └── EnforcerManagement.js  # Admin enforcer management
 │   │   ├── services/    # API services & Socket.IO client
-│   │   ├── utils/       # Shared utilities (violations.js)
+│   │   ├── utils/       # Shared utilities (violations.js, locations.js)
 │   │   └── database/    # SQLite (sql.js) for offline franchises
 │   │       ├── init.js       # Database initialization
 │   │       ├── franchises.js # Franchise queries
@@ -436,9 +453,14 @@ The system uses **Socket.IO** for real-time updates between web and mobile clien
 │
 └── mobile-app/          # React Native Android app
     ├── src/
+    │   ├── components/  # Reusable mobile components
+    │   │   ├── ComplaintChatbotModal.js  # Mobile complaint assistant
+    │   │   ├── AppReviewModal.js         # Mobile app review modal
+    │   │   └── Sidebar.js               # Navigation sidebar
     │   ├── contexts/    # React contexts
     │   ├── screens/     # App screens
     │   ├── services/    # API services & Socket.IO client
+    │   ├── utils/       # Shared utilities (locations.js)
     │   └── database/    # SQLite for offline franchises
     │       ├── init.js       # Database initialization
     │       ├── franchises.js # Franchise queries

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaBars, FaTimes, FaHome, FaClipboardList, FaSearch, FaTicketAlt, FaBuilding, FaUserShield, FaPlus, FaUser } from 'react-icons/fa';
+import { FaBars, FaTimes, FaHome, FaClipboardList, FaSearch, FaTicketAlt, FaBuilding, FaUserShield, FaPlus, FaUser, FaChartBar } from 'react-icons/fa';
 import './Sidebar.css';
 
 const Sidebar = ({ activeSection, onSectionChange, userRole, isCollapsed, toggleSidebar }) => {
@@ -17,6 +17,7 @@ const Sidebar = ({ activeSection, onSectionChange, userRole, isCollapsed, toggle
             { id: 'tickets', label: 'Tickets', icon: FaTicketAlt },
             { id: 'franchises', label: 'Franchises', icon: FaBuilding },
             { id: 'enforcers', label: 'Enforcers', icon: FaUserShield },
+            { id: 'analytics', label: 'App Analytics', icon: FaChartBar },
         ],
         enforcer: [
             { id: 'available', label: 'Available Quests', icon: FaSearch },

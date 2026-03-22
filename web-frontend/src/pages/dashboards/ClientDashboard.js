@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { complaintsAPI } from '../../services/api';
-import { FaWifi } from 'react-icons/fa';
+import { FaWifi, FaComments, FaStar } from 'react-icons/fa';
 import { MdWifiOff } from 'react-icons/md';
 import PedicabIcon from '../../components/PedicabIcon';
 import Sidebar from '../../components/Sidebar';
 import { useToast, handleApiError } from '../../components/ErrorToast';
 import { BARANGAYS } from '../../utils/locations';
+import ComplaintChatbot from '../../components/ComplaintChatbot';
+import AppReview from '../../components/AppReview';
 import './Dashboard.css';
 
 const ClientDashboard = () => {
@@ -19,6 +21,8 @@ const ClientDashboard = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState('synced');
+  const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [formData, setFormData] = useState({
     franchiseNumber: '',
     description: '',
@@ -127,6 +131,17 @@ const ClientDashboard = () => {
     }
   };
 
+  const handleChatbotSubmit = async (chatbotFormData) => {
+    try {
+      await complaintsAPI.create(chatbotFormData);
+      showSuccess('Complaint submitted successfully via assistant!');
+      loadComplaints();
+    } catch (error) {
+      showError(handleApiError(error));
+      throw error;
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -227,6 +242,23 @@ const ClientDashboard = () => {
           </div>
         </div>
         <div className="header-right">
+          <button
+            onClick={() => setChatbotOpen(true)}
+            className="btn-chatbot-header"
+            title="Need help filing a complaint?"
+          >
+            <FaComments size={18} />
+            <span>Assistant</span>
+          </button>
+          <button
+            onClick={() => setReviewOpen(true)}
+            className="btn-chatbot-header"
+            title="Rate your experience"
+            style={{ marginLeft: '10px' }}
+          >
+            <FaStar size={18} />
+            <span>Review App</span>
+          </button>
           <div className="connectivity-status">
             <span className="status-text">{isOnline ? 'Online' : 'Offline'}</span>
             <div className={`wifi-circle ${isOnline ? 'online' : 'offline'}`}>
@@ -440,6 +472,19 @@ const ClientDashboard = () => {
                 <span>{complaints.length}</span>
               </div>
             </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #eee' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Help Us Improve</h4>
+              <p style={{ color: '#666', marginBottom: '1rem' }}>
+                We value your feedback! Rate your experience with the app.
+              </p>
+              <button
+                className="btn-rate-app"
+                onClick={() => setReviewOpen(true)}
+              >
+                <FaStar /> Rate This App
+              </button>
+            </div>
           </div>
         )}
 
@@ -521,6 +566,19 @@ const ClientDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Complaint Chatbot Assistant */}
+      <ComplaintChatbot
+        isOpen={chatbotOpen}
+        onClose={() => setChatbotOpen(false)}
+        onSubmitComplaint={handleChatbotSubmit}
+      />
+
+      {/* App Review Modal */}
+      <AppReview
+        isOpen={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+      />
     </div>
   );
 };

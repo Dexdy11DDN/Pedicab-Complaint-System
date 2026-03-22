@@ -6,6 +6,8 @@ import { complaintsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { BARANGAYS } from '../utils/locations';
 import Sidebar from '../components/Sidebar';
+import AppReviewModal from '../components/AppReviewModal';
+import ComplaintChatbotModal from '../components/ComplaintChatbotModal';
 
 const ClientHomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
@@ -29,6 +31,8 @@ const ClientHomeScreen = ({ navigation }) => {
   });
   const [filteredLocations, setFilteredLocations] = useState([]);
   const [showLocationList, setShowLocationList] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [chatbotVisible, setChatbotVisible] = useState(false);
 
   const updateOrientation = () => {
     const { width, height } = Dimensions.get('window');
@@ -205,7 +209,14 @@ const ClientHomeScreen = ({ navigation }) => {
           </View>
         </View>
         <View style={[styles.headerRight, isLandscape && styles.headerRightLandscape]}>
+          <TouchableOpacity onPress={() => setChatbotVisible(true)} style={{ marginRight: 15 }}>
+            <Text style={{ fontSize: 22 }}>💬</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setReviewModalVisible(true)} style={{ marginRight: 15 }}>
+            <Text style={{ fontSize: 22 }}>⭐</Text>
+          </TouchableOpacity>
           <View style={[styles.connectivityStatus, isLandscape && styles.connectivityStatusLandscape]}>
+
             <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
             <View style={[styles.wifiCircle, isOnline ? styles.online : styles.offline]}>
               <Text style={styles.wifiIcon}>{isOnline ? '📶' : '🚫'}</Text>
@@ -529,6 +540,19 @@ const ClientHomeScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* App Review Modal */}
+      <AppReviewModal 
+        visible={reviewModalVisible} 
+        onClose={() => setReviewModalVisible(false)} 
+      />
+
+      {/* Complaint Chatbot Modal */}
+      <ComplaintChatbotModal
+        visible={chatbotVisible}
+        onClose={() => setChatbotVisible(false)}
+        onRefreshData={loadComplaints}
+      />
     </View>
   );
 };

@@ -88,4 +88,12 @@ export const ticketsAPI = {
   updateStatus: (id, status) => api.patch(`/tickets/${id}/status`, { status })
 };
 
+// App Reviews API
+export const appReviewsAPI = {
+  getMyReview: () => api.get('/app-reviews/my-review'),
+  submitReview: (data) => api.post('/app-reviews', data),
+  getAllReviews: (params) => api.get('/app-reviews', { params }),
+  deleteReview: (id) => api.delete(`/app-reviews/${id}`)
+};
+
 export default api;
